@@ -29,12 +29,18 @@ function buildPlanPdf(snapshot){
  function periodText(day,period){
   const staff=snapshot.team.filter(p=>isScheduled(snapshot.data.shifts[p.name]?.[day]?.[period]));
   const required=snapshot.data.soll[day]?.[period]||0,lines=[required||staff.length?`${staff.length} von ${required} besetzt`:'Kein Personalbedarf hinterlegt'];
+  if(staff.length>required)lines.push((staff.length-required)+' zu viel · Bedarf prüfen');
   if(staff.length<required){const missing=required-staff.length;lines.push(`${missing} ${missing===1?'Platz offen':'Plätze offen'}`);}
   for(const person of staff){
    lines.push(person.name+' · '+shiftRoleLabel(snapshot.data.shifts[person.name][day][period]));
+   const source=snapshot.data.shiftSources?.[person.name]?.[day]?.[period],time=source?.text?.match(/(?:ab\s*)?\d[^)]*/i)?.[0];
+   if(source?.task)lines.push('  Sonderaufgabe: '+source.task);
+   if(time)lines.push('  Zeitangabe aus dem Plan: '+time);
    const request=snapshot.transfers.find(t=>t.giver_id===person.id&&t.day===day&&t.period===period&&t.status==='pending');
    if(request)lines.push('  Übernahme bei '+(snapshot.team.find(p=>p.id===request.taker_id)?.name||'Profil')+' angefragt - unbestätigt');
   }
+  const absent=snapshot.team.filter(p=>['u','k','f'].includes(snapshot.data.shifts[p.name]?.[day]?.[period]));
+  if(absent.length)lines.push('Abwesend / frei: '+absent.map(p=>p.name+' ('+shiftRoleLabel(snapshot.data.shifts[p.name][day][period])+')').join(', '));
   const res=(period==='tag'?snapshot.data.resTag:snapshot.data.resAbend)?.[day];
   lines.push('Reservierungen '+(period==='tag'?'Tag':'Abend')+': '+(res||'-'));
   return lines.join('\n');

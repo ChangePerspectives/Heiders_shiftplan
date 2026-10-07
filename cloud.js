@@ -22,10 +22,10 @@ function cloudError(error) {
   return navigator.onLine ? 'Verbindung oder Berechtigung prüfen. Die Änderung wurde nicht bestätigt.' : 'Offline – Änderungen können gerade nicht gespeichert werden.';
 }
 function cloudBlankWeek() {
-  return {events:{},resTag:{},resAbend:{},soll:{mo:{tag:0,abend:0},di:{tag:2,abend:3},mi:{tag:2,abend:3},do:{tag:2,abend:2},fr:{tag:2,abend:3},sa:{tag:2,abend:3},so:{tag:0,abend:0}},note:'',shifts:Object.create(null),noteRevision:0,settingsRevision:0};
+  return {events:{},resTag:{},resAbend:{},soll:{mo:{tag:0,abend:0},di:{tag:2,abend:3},mi:{tag:2,abend:3},do:{tag:2,abend:2},fr:{tag:2,abend:3},sa:{tag:2,abend:3},so:{tag:0,abend:0}},note:'',shiftSources:Object.create(null),shifts:Object.create(null),noteRevision:0,settingsRevision:0};
 }
 function cloudClear() {
-  cloudRequest++;cloudLoadedWeek=null;cloudDeadline=null;cloudInbox={items:[],unread:0};cloudTransfers=[];cloudIncoming=[];cloudCapacity=[];cloudPool=[];cloudRule=null;closeWithdrawal();closeInbox();closeTransfer();
+  cloudRequest++;cloudLoadedWeek=null;cloudDeadline=null;cloudInbox={items:[],unread:0};cloudTransfers=[];cloudIncoming=[];cloudCapacity=[];cloudPool=[];cloudRule=null;closeWithdrawal();closeInbox();closeTransfer();closeEmployees();closeAdminAssignment();
   cloudActor=null; cloudSession=null; currentUser=null; team=[]; db={}; cloudShiftRevisions.clear();
   document.getElementById('appMain').hidden=true;
   document.getElementById('adminUserSelectWrapper').classList.add('hidden');
@@ -38,8 +38,12 @@ async function cloudSync() {
   const request=++cloudRequest, sessionId=cloudSession.user.id, week=getWeekKey(currentWeekStart);
   if (!navigator.onLine) {cloudStatus('Offline – der angezeigte Plan kann veraltet sein.',true);return;}
   try {
+    const profileResult=await cloudClient.from('profiles').select('id,name,job_role,is_admin,active,auth_user_id').order('name');
+    if(profileResult.error)throw profileResult.error;
+    const actor=profileResult.data.find(p=>(p.auth_user_id===sessionId||(window.heidersDemoActive&&!p.auth_user_id&&p.id===sessionId))&&p.active);
+    if(!actor){if(request===cloudRequest&&cloudSession?.user.id===sessionId){cloudClear();document.getElementById('loginError').textContent='Dein Konto wurde noch keinem aktiven Teamprofil zugeordnet.';}return;}
     const results=await Promise.all([
-      cloudClient.from('profiles').select('id,name,job_role,is_admin,active').order('name'),
+      Promise.resolve(profileResult),
       cloudClient.from('shifts').select('*').eq('week',week),
       cloudClient.from('week_settings').select('*').eq('week',week).maybeSingle(),
       cloudClient.rpc('get_reply_deadline',{p_week:week}),
@@ -47,15 +51,15 @@ async function cloudSync() {
       cloudClient.from('shift_transfers').select('*').eq('week',week).order('created_at',{ascending:false}),
       cloudClient.from('springer_pool').select('*').eq('week',week),
       cloudClient.rpc('get_change_rule',{p_week:week}),
-      cloudClient.from('shift_transfers').select('*').eq('taker_id',sessionId).eq('status','pending').order('created_at',{ascending:false}),
+      cloudClient.from('shift_transfers').select('*').eq('taker_id',actor.id).eq('status','pending').order('created_at',{ascending:false}),
       cloudClient.rpc('get_capacity_alerts',{p_week:week})
     ]);
     for (const r of results) if(r.error) throw r.error;
     if (request !== cloudRequest || !cloudSession || cloudSession.user.id !== sessionId) return;
     const profiles=results[0].data;
-    cloudActor=profiles.find(p=>p.id===sessionId && p.active);
+    cloudActor=actor;
     if(!cloudActor) {cloudClear();document.getElementById('loginError').textContent='Dein Konto wurde noch keinem aktiven Teamprofil zugeordnet.';return;}
-    team=profiles.filter(p=>p.active).map(p=>({id:p.id,name:p.name,role:p.job_role,isAdmin:p.is_admin}));
+    team=profiles.filter(p=>p.active).map(p=>({id:p.id,name:p.name,role:p.job_role,isAdmin:p.is_admin,hasLogin:!!p.auth_user_id||!!window.heidersDemoActive}));
     if (!cloudActor.is_admin || !team.some(p=>p.name===currentUser)) currentUser=cloudActor.name;
     const data=cloudBlankWeek(), settings=results[2].data;
     if(settings) Object.assign(data,{note:settings.note,soll:settings.requirements,resTag:settings.reservations_day,resAbend:settings.reservations_evening,noteRevision:settings.note_revision,settingsRevision:settings.settings_revision});
@@ -65,6 +69,7 @@ async function cloudSync() {
       data.shifts[person.name] ??= {};
       data.shifts[person.name][row.day] ??= {tag:'-',abend:'-'};
       data.shifts[person.name][row.day][row.period]=row.value;
+      data.shiftSources[person.name]??={};data.shiftSources[person.name][row.day]??={};data.shiftSources[person.name][row.day][row.period]={text:row.source_text||'',task:row.special_task||''};
       revisions.set([week,row.user_id,row.day,row.period].join('|'),row.revision);
     }
     db[week]=data; cloudShiftRevisions=revisions;cloudLoadedWeek=week;cloudDeadline=results[3].data;cloudInbox=results[4].data;cloudTransfers=results[5].data;cloudPool=results[6].data;cloudRule=results[7].data;cloudIncoming=results[8].data;cloudCapacity=results[9].data.alerts||[];cloudServerOffset=new Date(cloudRule.server_now).getTime()-Date.now();
@@ -150,7 +155,7 @@ async function resetUserChoice() {
 }
 function setupUserInterface() {
   const admin=!!cloudActor?.is_admin;
-  for(const id of ['adminAssignmentButton','demandEditButton','reservationEditButton'])document.getElementById(id).hidden=!admin;
+  for(const id of ['adminAssignmentButton','demandEditButton','reservationEditButton','employeesButton'])document.getElementById(id).hidden=!admin;
   document.getElementById('userBadgeName').textContent=cloudActor?.name || 'Abgemeldet';
   document.getElementById('accountDetails').textContent=(window.heidersDemoActive?'Testmodus · ': '')+(admin?'Admin':'Teammitglied')+(cloudSession?.user.email?' · '+cloudSession.user.email:'');
   document.getElementById('currentUserDisplay').textContent=currentUser;
@@ -184,6 +189,7 @@ async function updateShift(day,period,value) {
   if(!person) return;
   if(isShiftLocked(week,day,period)){cloudStatus(shiftLockText(week,day),true);return;}
   const old=db[week]?.shifts[currentUser]?.[day]?.[period] || '-';
+  if(old==='offen'&&['se','kü'].includes(value))return confirmShiftRole(person.id,day,period,value);
   if(isScheduled(old) && value!==old) return openWithdrawal(day,period);
   if(value===old && shiftAnswered(week,person.id,day,period)) {cloudStatus('Bereits eingetragen oder beantwortet.');return;}
   const saved=await cloudWrite('save_shift',{p_week:week,p_user:person.id,p_day:day,p_period:period,p_value:value,p_revision:cloudShiftRevisions.get([week,person.id,day,period].join('|')) || 0});
@@ -225,8 +231,8 @@ function saveSollSettings() {
 }
 window.onload=()=>cloudInit().catch(()=>cloudStatus('App konnte nicht geladen werden. Bitte erneut öffnen.',true));
 
-function isScheduled(value) {return ['se','kü','th'].includes(value);}
-function shiftRoleLabel(value) {return ({se:'Service/Theke',th:'Theke','kü':'Küche',u:'Urlaub',k:'Krank',f:'Frei','-':'Frei'})[value] || value;}
+function isScheduled(value) {return ['se','kü','th','offen'].includes(value);}
+function shiftRoleLabel(value) {return ({offen:'Aufgabe noch offen',se:'Service/Theke',th:'Theke','kü':'Küche',u:'Urlaub',k:'Krank',f:'Frei','-':'Frei'})[value] || value;}
 function shiftAnswered(week,id,day,period) {return (cloudShiftRevisions.get([week,id,day,period].join('|')) || 0)>0;}
 function renderClaimAction(day,period) {
   const person=team.find(p=>p.name===currentUser),value=db[getWeekKey(currentWeekStart)]?.shifts[currentUser]?.[day]?.[period];

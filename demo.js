@@ -5,7 +5,7 @@ const demoPeople=[['Test Nelly','Service/Theke',true],['Test Pia','Service/Theke
 function demoId(){return crypto.randomUUID();}
 function demoWeek(delta=0){const d=getStartOfCurrentWeek();d.setDate(d.getDate()+delta*7);return getWeekKey(d);}
 function demoBlankStore(){
- const state={version:3,profiles:demoPeople,shifts:[],week_settings:[],shift_transfers:[],springer_pool:[],notifications:[],notification_reads:[],undos:[]};
+ const state={version:3,profiles:structuredClone(demoPeople),shifts:[],week_settings:[],shift_transfers:[],springer_pool:[],notifications:[],notification_reads:[],undos:[]};
  for(const offset of [-1,0,1,2,3,4]){
  const week=demoWeek(offset),setting=cloudBlankWeek();
  state.week_settings.push({week,note:'Beispieldaten: Übernahmen bestätigen und Springer anfragen.',requirements:setting.soll,reservations_day:{do:'14:00 · 4 Personen'},reservations_evening:{do:'18:30 · Gruppe, 8 Personen'},note_revision:1,settings_revision:1});
@@ -15,7 +15,7 @@ function demoBlankStore(){
  return state;
 }
 function demoPersist(){localStorage.setItem(DEMO_KEY,JSON.stringify(demoStore));}
-function demoActor(){return demoStore.profiles.find(p=>p.id===cloudSession?.user.id&&p.active);}
+function demoActor(){return demoStore.profiles.find(p=>(p.auth_user_id||p.id)===cloudSession?.user.id&&p.active);}
 function demoAssert(value,message='Keine Berechtigung',code='42501'){if(!value)throw {message,code};}
 function demoOwn(id){const actor=demoActor();demoAssert(actor&&(id===actor.id||actor.is_admin));}
 function demoShift(week,id,day,period,create=false){let s=demoStore.shifts.find(s=>s.week===week&&s.user_id===id&&s.day===day&&s.period===period);if(!s&&create){s={week,user_id:id,day,period,value:'-',revision:0};demoStore.shifts.push(s);}return s;}
@@ -56,6 +56,9 @@ function demoEffective(t){if(t.status!=='pending')return t.status;const s=demoSh
 function demoExecute(name,a){
  const actor=demoActor();demoAssert(actor);
  if(name==='assign_recurring_shifts')return demoAssignRecurring(a);
+ if(name==='create_employee'){demoAssert(actor.is_admin);demoAssert(typeof a.p_name==='string'&&a.p_name.trim().length>0&&a.p_name.trim().length<=60,'Ungültiger Name','22023');demoAssert(!demoStore.profiles.some(p=>p.name.toLowerCase()===a.p_name.trim().toLowerCase()),'Name bereits vorhanden','23505');const id=demoId();demoStore.profiles.push({id,name:a.p_name.trim(),job_role:'Aufgabe je Schicht wählen',is_admin:false,active:true,auth_user_id:null});return id;}
+ if(name==='confirm_shift_role'){demoOwn(a.p_user);const s=demoShift(a.p_week,a.p_user,a.p_day,a.p_period);demoAssert(!isShiftLocked(a.p_week,a.p_day,a.p_period),'Diese Schicht ist abgeschlossen','22023');demoAssert(['se','kü'].includes(a.p_value),'Ungültige Aufgabe','22023');demoAssert(!demoStore.shift_transfers.some(t=>t.week===a.p_week&&t.day===a.p_day&&t.period===a.p_period&&t.giver_id===a.p_user&&t.status==='pending'),'Bitte Anfrage beenden','22023');demoAssert(s?.value==='offen'&&s.revision===a.p_revision,'Zwischenzeitlich geändert','40001');s.value=a.p_value;s.revision++;return null;}
+ if(name==='assign_week_template')return demoAssignWeekTemplate(a);
  if(name==='get_capacity_alerts')return demoCapacityAlerts(a.p_week);
  if(name==='get_reply_deadline')return demoReplyStatus(a.p_week);
  if(name==='get_change_rule'){const rule=demoDeadline(a.p_week);return {...rule,late:Date.now()>=Date.parse(rule.deadline),server_now:new Date().toISOString()};}
@@ -88,7 +91,7 @@ function demoExecute(name,a){
  demoAssert(!isShiftLocked(a.p_week,a.p_day,a.p_period),'Schicht ist abgeschlossen: vergangener Tag oder Tagschicht ab 15:00 Uhr','22023');
  demoOwn(a.p_user);demoAssert(a.p_user!==a.p_target&&demoStore.profiles.some(p=>p.id===a.p_target&&p.active),'Ungültiger Ersatz','22023');
  const s=demoShift(a.p_week,a.p_user,a.p_day,a.p_period),target=demoShift(a.p_week,a.p_target,a.p_day,a.p_period,true);
- demoAssert(s?.revision===a.p_revision,'Zwischenzeitlich geändert','40001');demoAssert(isScheduled(s.value),'Keine eingetragene Schicht','22023');demoAssert(!['se','kü','th','u','k'].includes(target.value),'Ersatz bereits eingetragen oder abwesend','22023');
+ demoAssert(s?.revision===a.p_revision,'Zwischenzeitlich geändert','40001');demoAssert(isScheduled(s.value),'Keine eingetragene Schicht','22023');demoAssert(!['se','kü','th','offen','u','k'].includes(target.value),'Ersatz bereits eingetragen oder abwesend','22023');
  for(const t of demoStore.shift_transfers)if(t.status==='pending'&&demoEffective(t)==='stale')t.status='stale';
  demoAssert(!demoStore.shift_transfers.some(t=>t.week===a.p_week&&t.giver_id===a.p_user&&t.day===a.p_day&&t.period===a.p_period&&t.status==='pending'),'Übernahme bereits angefragt','23505');
  demoAssert(a.p_note.length<=1000,'Nachricht zu lang','22023');
@@ -122,12 +125,12 @@ async function startDemo(){
  cloudClient=createDemoClient();cloudSession={user:{id:demoPeople[0].id}};currentUser=null;db={};cloudActor=null;cloudLoadedWeek=null;cloudRequest++;cloudShiftRevisions.clear();
  currentWeekStart=getStartOfCurrentWeek();focusDay='do';
  document.getElementById('demoBanner').hidden=false;
- document.getElementById('demoPerson').innerHTML=demoPeople.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}${p.is_admin?' · Admin':' · Team'}</option>`).join('');
+ document.getElementById('demoPerson').innerHTML=demoStore.profiles.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}${p.is_admin?' · Admin':' · Team'}</option>`).join('');
  switchTab('cards');await cloudSync();
  if(!window.heidersDemoTimer)window.heidersDemoTimer=setInterval(()=>{if(window.heidersDemoActive&&!document.hidden)cloudSync();},15000);
 }
 async function switchDemoPerson(id){
- if(!window.heidersDemoActive||cloudBusy||!demoPeople.some(p=>p.id===id)){document.getElementById('demoPerson').value=cloudSession?.user.id;return;}
+ if(!window.heidersDemoActive||cloudBusy||!demoStore.profiles.some(p=>p.id===id)){document.getElementById('demoPerson').value=cloudSession?.user.id;return;}
  closeWithdrawal();closeTransfer();closeInbox();lastUndo=null;cloudSession={user:{id}};cloudActor=null;currentUser=null;cloudRequest++;await cloudSync();
 }
 async function resetDemo(){if(cloudBusy)return;localStorage.removeItem(DEMO_KEY);await startDemo();cloudStatus('Testdaten zurückgesetzt.');}
@@ -176,3 +179,29 @@ function demoAssignRecurring(a){
  }
  return {items};
 }
+
+function demoAssignWeekTemplate(a){
+ demoAssert(demoActor().is_admin);
+ demoAssert(Array.isArray(a.p_pattern)&&a.p_pattern.length>0&&a.p_pattern.length<=14,'Ungültige Vorlage','22023');
+ demoAssert(Number.isInteger(a.p_weeks)&&a.p_weeks>=1&&a.p_weeks<=12,'Ungültige Wochenanzahl','22023');
+ const keys=new Set();for(const slot of a.p_pattern){const key=slot.day+'|'+slot.period;demoAssert(daysOfWeek.some(d=>d.key===slot.day)&&['tag','abend'].includes(slot.period)&&['se','kü'].includes(slot.role)&&!keys.has(key),'Ungültige Vorlage','22023');keys.add(key);}
+ const items=[];for(let i=0;i<a.p_weeks;i++){const week=new Date(Date.parse(a.p_start+'T12:00:00Z')+i*7*86400000).toISOString().slice(0,10);for(const slot of [...a.p_pattern].sort((a,b)=>daysOfWeek.findIndex(d=>d.key===a.day)-daysOfWeek.findIndex(d=>d.key===b.day)||Number(a.period==='abend')-Number(b.period==='abend'))){const result=demoAssignRecurring({p_start:week,p_user:a.p_user,p_day:slot.day,p_period:slot.period,p_value:slot.role,p_weeks:1});items.push(...result.items.map(item=>({...item,day:slot.day,period:slot.period,role:slot.role})));}}
+ return {items};
+}
+
+function closePreviewTeam(){document.getElementById('previewTeamModal').hidden=true;}
+function openPreviewTeam(){
+ if(!window.heidersDemoActive||cloudBusy)return;
+ document.getElementById('previewTeamNames').innerHTML=demoStore.profiles.map((p,i)=>`<label>${p.is_admin?'Admin':'Team'} ${i+1}<input id="previewName_${i}" value="${escapeHtml(p.name)}" maxlength="60" required style="width:100%;margin:5px 0 12px"></label>`).join('');
+ document.getElementById('previewTeamAdd').value='';document.getElementById('previewTeamError').textContent='';document.getElementById('previewTeamModal').hidden=false;
+}
+async function savePreviewTeam(){
+ if(!window.heidersDemoActive||cloudBusy)return;
+ const names=demoStore.profiles.map((p,i)=>document.getElementById(`previewName_${i}`).value.trim());
+ const extra=document.getElementById('previewTeamAdd').value.split(/\r?\n/).map(n=>n.trim()).filter(Boolean),all=[...names,...extra];
+ if(all.some(n=>!n||n.length>60)||new Set(all.map(n=>n.toLocaleLowerCase('de-DE'))).size!==all.length||all.length>60){document.getElementById('previewTeamError').textContent='Bitte eindeutige Namen mit 1–60 Zeichen verwenden (höchstens 60 Personen).';return;}
+ demoStore.profiles.forEach((p,i)=>p.name=names[i]);for(const name of extra)demoStore.profiles.push({id:demoId(),name,job_role:'Service/Theke & Küche',is_admin:false,active:true});
+ demoPersist();document.getElementById('demoPerson').innerHTML=demoStore.profiles.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}${p.is_admin?' · Admin':' · Team'}</option>`).join('');document.getElementById('demoPerson').value=cloudSession.user.id;
+ currentUser=null;closePreviewTeam();await cloudSync();
+}
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!document.getElementById('previewTeamModal').hidden)closePreviewTeam();});
