@@ -58,6 +58,10 @@
     .shift-line + .shift-line { border-top: 1px solid #e7e5e4; margin-top: 3px; padding-top: 3px; }
     .shift-label { font-size: 10px; line-height: 1.2; color: #554D47; font-weight: 600; }
     .shift-cell { min-width: 76px; }
+    .week-table-scroll { overflow: auto; max-height: 520px; max-height: min(60dvh, 520px); -webkit-overflow-scrolling: touch; isolation: isolate; }
+    .sticky-table thead th { position: sticky; top: 0; z-index: 20; background-color: #F3EFEA !important; box-shadow: 0 2px 0 #D1D5DB; }
+    .sticky-table thead th.sticky-col { top: 0; left: 0; z-index: 30 !important; }
+    .sticky-table tbody td.sticky-col { z-index: 10 !important; }
   </style>
   <meta name="theme-color" content="#FDFBF7">
   <link rel="manifest" href="./manifest.webmanifest">
@@ -81,30 +85,31 @@
         </div>
         <div id="userBadgeWrapper" class="text-xs bg-[#6B122D] text-[#F5E6C8] font-bold px-2.5 py-1.5 rounded-lg border border-[#C5A059]/40 flex items-center gap-1">
           <span id="userBadgeName">Nelly</span>
-          <button onclick="resetUserChoice()" class="text-stone-300 hover:text-white ml-1 text-[10px]" title="Wechseln">⚙️</button>
+          <button onclick="resetUserChoice()" class="text-stone-300 hover:text-white ml-1 text-[10px]" title="Abmelden" aria-label="Abmelden">↪</button>
         </div>
       </div>
     </div>
   </header>
 
-  <!-- Login Modal -->
-  <div id="loginModal" class="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center space-y-4">
-      <div class="text-4xl">🍷</div>
-      <h2 class="font-bold text-lg text-[#8C1D40]">Willkommen bei Heider's</h2>
-      <p class="text-xs text-stone-600">Bitte wähle dein Profil aus. Das Smartphone merkt sich deine Auswahl.</p>
-      
-      <select id="initialUserSelect" class="w-full p-3 border border-stone-300 rounded-xl text-sm font-bold bg-stone-50 focus:outline-none focus:ring-2 focus:ring-[#8C1D40]">
-      </select>
-
-      <button onclick="confirmUserChoice()" class="w-full py-3 bg-[#8C1D40] text-white rounded-xl font-bold shadow-lg hover:bg-[#6B122D]">
-        Anmelden
-      </button>
-    </div>
+  <!-- Anmeldung mit echtem Teamkonto -->
+  <div id="loginModal" class="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
+    <form onsubmit="event.preventDefault();confirmUserChoice()" class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+      <h2 class="font-bold text-lg text-[#8C1D40]">Heider’s · Team-Anmeldung</h2>
+      <label class="block text-sm">E-Mail
+        <input id="loginEmail" type="email" autocomplete="username" required class="w-full p-3 border rounded-xl mt-1">
+      </label>
+      <label class="block text-sm">Passwort
+        <input id="loginPassword" type="password" autocomplete="current-password" required class="w-full p-3 border rounded-xl mt-1">
+      </label>
+      <p id="loginError" role="alert" class="text-xs text-red-700"></p>
+      <button id="loginSubmit" type="submit" class="w-full py-3 bg-[#8C1D40] text-white rounded-xl font-bold disabled:opacity-50">Anmelden</button>
+      <p class="text-xs text-stone-600">Noch kein Zugang oder Passwort vergessen? Bitte Pia oder Nelly kontaktieren.</p>
+    </form>
   </div>
 
   <!-- Haupt-Container -->
-  <div class="max-w-md mx-auto px-3 mt-3 space-y-3">
+  <p id="syncStatus" role="status" aria-live="polite" class="max-w-md mx-auto px-3 mt-2 text-xs">Verbindung wird hergestellt …</p>
+  <div id="appMain" hidden class="max-w-md mx-auto px-3 mt-3 space-y-3">
 
     <!-- Wochen-Navigation -->
     <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-3 flex justify-between items-center">
@@ -136,7 +141,7 @@
     <div class="bg-amber-50/90 border border-amber-200 rounded-2xl p-3 text-xs space-y-1.5 shadow-sm">
       <div class="flex justify-between items-center font-bold text-amber-900">
         <span class="flex items-center gap-1.5">📝 Wochen-Hinweise</span>
-        <button onclick="toggleNoteEdit()" class="text-[10px] text-amber-800 underline">Bearbeiten</button>
+        <button id="noteEditButton" onclick="toggleNoteEdit()" class="text-[10px] text-amber-800 underline">Bearbeiten</button>
       </div>
       <div id="noteDisplay" class="text-amber-950 italic text-[11px]">Keine Notizen.</div>
       <div id="noteEditBox" class="hidden space-y-2 mt-1">
@@ -159,7 +164,7 @@
     <div id="tabWeek" class="hidden space-y-3">
       <div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden p-2">
         <div class="text-xs font-bold text-[#8C1D40] mb-2 px-1">📊 Auslastung & Gesamtplan aller Mitarbeiter</div>
-        <div class="overflow-x-auto">
+        <div id="weekTableScroll" class="week-table-scroll" tabindex="0" role="region" aria-label="Gesamtplan, horizontal und vertikal scrollbar">
           <table class="w-full text-left text-xs sticky-table min-w-[540px]">
             <thead>
               <tr id="weekTableHeader" class="bg-stone-100 font-bold text-[#8C1D40] border-b border-stone-300">
@@ -220,29 +225,13 @@
       return monday;
     }
 
-    const team = [
-      { name: 'Pia', role: 'Admin · Küche & Service/Theke', isAdmin: true },
-      { name: 'Nelly', role: 'Admin · Service/Theke', isAdmin: true },
-      { name: 'Valeria', role: 'Küche & Service/Theke', isAdmin: false },
-      { name: 'Martina', role: 'Küche', isAdmin: false },
-      { name: 'Max', role: 'Service & Theke', isAdmin: false },
-      { name: 'Patricia', role: 'Service & Theke', isAdmin: false },
-      { name: 'Tina', role: 'Service & Theke', isAdmin: false },
-      { name: 'Nadja', role: 'Service & Theke', isAdmin: false },
-      { name: 'Sophie', role: 'Service & Theke', isAdmin: false },
-      { name: 'Esther', role: 'Service & Theke', isAdmin: false },
-      { name: 'Jane', role: 'Service & Theke', isAdmin: false },
-      { name: 'Ralf', role: 'Service & Theke', isAdmin: false }
-    ];
+    let team = [];
 
-    let currentUser = localStorage.getItem('heiders_user') || null;
+    let currentUser = null;
     let currentWeekStart = getStartOfCurrentWeek();
     let showSpecialDays = false;
 
     let db = {};
-    try {
-      db = JSON.parse(localStorage.getItem('heiders_dienstplan_db')) || {};
-    } catch(e) { db = {}; }
 
     const daysOfWeek = [
       { key: 'mo', label: 'Montag', isSpecial: true },
@@ -254,68 +243,12 @@
       { key: 'so', label: 'Sonntag', isSpecial: true }
     ];
 
-    function init() {
-      if (!currentUser) {
-        showLoginModal();
-      } else {
-        setupUserInterface();
-      }
-      loadWeekData();
-      switchTab('cards');
-      renderApp();
-    }
 
-    function showLoginModal() {
-      const select = document.getElementById('initialUserSelect');
-      select.innerHTML = team.map(m => `<option value="${m.name}">${m.name} (${m.role})</option>`).join('');
-      document.getElementById('loginModal').classList.remove('hidden');
-    }
 
-    function confirmUserChoice() {
-      currentUser = document.getElementById('initialUserSelect').value;
-      localStorage.setItem('heiders_user', currentUser);
-      document.getElementById('loginModal').classList.add('hidden');
-      setupUserInterface();
-      renderApp();
-    }
 
-    function resetUserChoice() {
-      localStorage.removeItem('heiders_user');
-      currentUser = null;
-      showLoginModal();
-    }
 
-    function setupUserInterface() {
-      const userObj = team.find(t => t.name === currentUser) || team[1];
-      document.getElementById('userBadgeName').innerText = currentUser;
-      document.getElementById('currentUserDisplay').innerText = currentUser;
 
-      const adminWrapper = document.getElementById('adminUserSelectWrapper');
-      const adminControls = document.getElementById('adminControls');
 
-      if (userObj.isAdmin) {
-        adminWrapper.classList.remove('hidden');
-        adminControls.classList.remove('hidden');
-        const select = document.getElementById('userSelect');
-        select.innerHTML = team.map(m => `<option value="${m.name}" ${m.name === currentUser ? 'selected' : ''}>${m.name}</option>`).join('');
-      } else {
-        adminWrapper.classList.add('hidden');
-        adminControls.classList.add('hidden');
-      }
-    }
-
-    function changeUser(userName) {
-      currentUser = userName;
-      document.getElementById('currentUserDisplay').innerText = currentUser;
-      document.getElementById('userBadgeName').innerText = currentUser;
-      renderApp();
-    }
-
-    function getWeekKey(date) {
-      const d = new Date(date);
-      d.setHours(0, 0, 0, 0);
-      return d.toISOString().split('T')[0];
-    }
 
     function getDateForDay(dayIndex) {
       const d = new Date(currentWeekStart);
@@ -327,50 +260,8 @@
       return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
     }
 
-    function loadWeekData() {
-      const weekKey = getWeekKey(currentWeekStart);
-      if (!db[weekKey]) {
-        db[weekKey] = {
-          events: {},
-          resTag: {},
-          resAbend: {},
-          soll: {
-            di: { tag: 2, abend: 3 },
-            mi: { tag: 2, abend: 3 },
-            do: { tag: 2, abend: 2 },
-            fr: { tag: 2, abend: 3 },
-            sa: { tag: 2, abend: 3 },
-            mo: { tag: 0, abend: 0 },
-            so: { tag: 0, abend: 0 }
-          },
-          note: '',
-          shifts: {}
-        };
 
-        team.forEach(m => {
-          db[weekKey].shifts[m.name] = {
-            di: { tag: (m.name === 'Pia' ? 'kü' : '-'), abend: (m.name === 'Pia' ? 'kü' : '-') },
-            mi: { tag: (m.name === 'Pia' ? 'kü' : '-'), abend: (m.name === 'Pia' ? 'se' : '-') },
-            do: { tag: (m.name === 'Pia' ? 'th' : '-'), abend: (m.name === 'Pia' ? 'se' : '-') },
-            fr: { tag: (m.name === 'Pia' ? 'se' : '-'), abend: (m.name === 'Pia' ? 'kü' : '-') },
-            sa: { tag: (m.name === 'Pia' ? 'kü' : '-'), abend: (m.name === 'Pia' ? 'kü' : '-') }
-          };
-        });
-        saveDB();
-      }
-    }
 
-    function saveDB() {
-      try {
-        localStorage.setItem('heiders_dienstplan_db', JSON.stringify(db));
-      } catch(e){}
-    }
-
-    function changeWeek(direction) {
-      currentWeekStart.setDate(currentWeekStart.getDate() + (direction * 7));
-      loadWeekData();
-      renderApp();
-    }
 
     function toggleSpecialDays() {
       showSpecialDays = !showSpecialDays;
@@ -410,13 +301,6 @@
       }
     }
 
-    function saveWeekNote() {
-      const weekKey = getWeekKey(currentWeekStart);
-      db[weekKey].note = document.getElementById('noteInput').value;
-      saveDB();
-      document.getElementById('noteEditBox').classList.add('hidden');
-      renderApp();
-    }
 
     function renderApp() {
       const weekKey = getWeekKey(currentWeekStart);
@@ -511,8 +395,8 @@
             <div class="bg-purple-50 border border-purple-300 rounded-xl p-2.5 text-xs text-purple-950 space-y-1 shadow-sm">
               <div class="font-bold text-purple-900 flex items-center gap-1">📌 RESERVIERUNGEN & EVENTS:</div>
               <div class="pl-1 space-y-0.5">
-                ${resT ? `<div class="font-semibold text-[11px]">• Tag: <span class="font-normal">${resT}</span></div>` : ''}
-                ${resA ? `<div class="font-semibold text-[11px]">• Abend: <span class="font-normal">${resA}</span></div>` : ''}
+                ${resT ? `<div class="font-semibold text-[11px]">• Tag: <span class="font-normal">${escapeHtml(resT)}</span></div>` : ''}
+                ${resA ? `<div class="font-semibold text-[11px]">• Abend: <span class="font-normal">${escapeHtml(resA)}</span></div>` : ''}
               </div>
             </div>
           ` : ''}
@@ -526,7 +410,7 @@
               <div class="flex flex-wrap gap-1.5 mb-2">
                 ${staffTag.map(s => `
                   <span class="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg font-bold ${s.role.toLowerCase().includes('kü') ? 'badge-kü' : 'badge-se'}">
-                    ${s.name} (${s.role})
+                    ${escapeHtml(s.name)} (${escapeHtml(s.role)})
                   </span>
                 `).join('')}
                 ${staffTag.length === 0 ? '<span class="text-[11px] text-stone-400 italic">Niemand eingetragen</span>' : ''}
@@ -544,7 +428,7 @@
               <div class="flex flex-wrap gap-1.5 mb-2">
                 ${staffAbend.map(s => `
                   <span class="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg font-bold ${s.role.toLowerCase().includes('kü') ? 'badge-kü' : 'badge-se'}">
-                    ${s.name} (${s.role})
+                    ${escapeHtml(s.name)} (${escapeHtml(s.role)})
                   </span>
                 `).join('')}
                 ${staffAbend.length === 0 ? '<span class="text-[11px] text-stone-400 italic">Niemand eingetragen</span>' : ''}
@@ -587,7 +471,7 @@
         tr.className = `${bgClass} border-b-2 border-stone-200/80 hover:bg-amber-50`;
 
         let nameTd = `<td class="p-2 sticky-col ${isUser ? 'bg-amber-100' : 'bg-white'} border-r-2 border-stone-300">
-          <span class="font-bold text-xs text-[#2B2321] block leading-tight">${m.name}</span>
+          <span class="font-bold text-xs text-[#2B2321] block leading-tight">${escapeHtml(m.name)}</span>
         </td>`;
 
         let daysTds = '';
@@ -616,19 +500,6 @@
       });
     }
 
-    function quickClaim(dayKey, shiftType) {
-      const weekKey = getWeekKey(currentWeekStart);
-      const userObj = team.find(t => t.name === currentUser);
-      let roleCode = 'se';
-      if (userObj.role.includes('Küche') && !userObj.role.includes('Service')) roleCode = 'kü';
-
-      if (!db[weekKey].shifts[currentUser]) db[weekKey].shifts[currentUser] = {};
-      if (!db[weekKey].shifts[currentUser][dayKey]) db[weekKey].shifts[currentUser][dayKey] = { tag: '-', abend: '-' };
-
-      db[weekKey].shifts[currentUser][dayKey][shiftType] = roleCode;
-      saveDB();
-      renderApp();
-    }
 
     function renderMyShiftsTab() {
       const weekKey = getWeekKey(currentWeekStart);
@@ -672,14 +543,6 @@
       });
     }
 
-    function updateShift(dayKey, shiftType, val) {
-      const weekKey = getWeekKey(currentWeekStart);
-      if (!db[weekKey].shifts[currentUser]) db[weekKey].shifts[currentUser] = {};
-      if (!db[weekKey].shifts[currentUser][dayKey]) db[weekKey].shifts[currentUser][dayKey] = { tag: '-', abend: '-' };
-      db[weekKey].shifts[currentUser][dayKey][shiftType] = val;
-      saveDB();
-      renderApp();
-    }
 
     function openSollModal() {
       const weekKey = getWeekKey(currentWeekStart);
@@ -700,21 +563,21 @@
             <div class="grid grid-cols-2 gap-2">
               <div>
                 <label class="block text-[9px] font-bold text-stone-500">Soll Tag:</label>
-                <input type="number" id="soll_${dayKey}_tag" value="${soll.tag}" min="0" class="p-1 border rounded w-full">
+                <input type="number" id="soll_${dayKey}_tag" value="${Number(soll.tag) || 0}" min="0" max="50" step="1" class="p-1 border rounded w-full">
               </div>
               <div>
                 <label class="block text-[9px] font-bold text-stone-500">Soll Abend:</label>
-                <input type="number" id="soll_${dayKey}_abend" value="${soll.abend}" min="0" class="p-1 border rounded w-full">
+                <input type="number" id="soll_${dayKey}_abend" value="${Number(soll.abend) || 0}" min="0" max="50" step="1" class="p-1 border rounded w-full">
               </div>
             </div>
             <div class="grid grid-cols-2 gap-2">
               <div>
                 <label class="block text-[9px] font-bold text-purple-900">Res. Tag:</label>
-                <input type="text" id="res_${dayKey}_tag" value="${resT}" placeholder="z.B. 12 Pers. Tag" class="p-1 border rounded w-full">
+                <input type="text" id="res_${dayKey}_tag" value="${escapeHtml(resT)}" placeholder="z.B. 12 Pers. Tag" class="p-1 border rounded w-full">
               </div>
               <div>
                 <label class="block text-[9px] font-bold text-purple-900">Res. Abend:</label>
-                <input type="text" id="res_${dayKey}_abend" value="${resA}" placeholder="z.B. 45 Pers. Lesung" class="p-1 border rounded w-full">
+                <input type="text" id="res_${dayKey}_abend" value="${escapeHtml(resA)}" placeholder="z.B. 45 Pers. Lesung" class="p-1 border rounded w-full">
               </div>
             </div>
           </div>
@@ -727,27 +590,12 @@
       document.getElementById('sollModal').classList.add('hidden');
     }
 
-    function saveSollSettings() {
-      const weekKey = getWeekKey(currentWeekStart);
-      if (!db[weekKey].resTag) db[weekKey].resTag = {};
-      if (!db[weekKey].resAbend) db[weekKey].resAbend = {};
 
-      daysOfWeek.forEach(dayObj => {
-        const dayKey = dayObj.key;
-        db[weekKey].soll[dayKey] = {
-          tag: parseInt(document.getElementById(`soll_${dayKey}_tag`).value) || 0,
-          abend: parseInt(document.getElementById(`soll_${dayKey}_abend`).value) || 0
-        };
-        db[weekKey].resTag[dayKey] = document.getElementById(`res_${dayKey}_tag`).value;
-        db[weekKey].resAbend[dayKey] = document.getElementById(`res_${dayKey}_abend`).value;
-      });
-      saveDB();
-      closeSollModal();
-      renderApp();
-    }
 
-    window.onload = init;
   </script>
+  <script src="./config.js"></script>
+  <script src="./supabase.js"></script>
+  <script src="./cloud.js"></script>
   <aside id="appUpdate" hidden style="position:fixed;bottom:16px;left:12px;right:12px;max-width:420px;margin:auto;background:#2B2321;color:white;padding:14px;border-radius:14px;z-index:100;box-shadow:0 4px 20px #0004;font-size:14px" role="status" aria-live="polite">
     <div>Eine neue App-Version ist verfügbar.</div>
     <button id="applyUpdate" type="button" style="margin-top:8px;background:#FDFBF7;color:#2B2321;padding:10px 14px;border-radius:8px;font-weight:bold">Jetzt aktualisieren</button>

@@ -1,8 +1,8 @@
 // Bei jeder Veröffentlichung CACHE_VERSION ändern (oder dieses Paket vollständig ersetzen).
-const CACHE_VERSION = '9c1d543f157a';
+const CACHE_VERSION = 'cloud-e9af9fb3b781';
 const PREFIX = 'heiders-app-';
 const CACHE = PREFIX + CACHE_VERSION;
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
+const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './config.js', './supabase.js', './cloud.js'];
 const TAILWIND = 'https://cdn.tailwindcss.com/';
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
