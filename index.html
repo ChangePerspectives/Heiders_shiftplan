@@ -6,18 +6,18 @@
 <div id="loginModal" class="message-modal"><form class="message-panel form-stack" onsubmit="event.preventDefault();confirmUserChoice()"><h2>Heider’s · Team-Anmeldung</h2><label>E-Mail<input id="loginEmail" type="email" autocomplete="username" required style="width:100%;margin-top:5px"></label><label>Passwort<input id="loginPassword" type="password" autocomplete="current-password" required style="width:100%;margin-top:5px"></label><p id="loginError" class="error" role="alert"></p><button id="loginSubmit" class="primary wide" type="submit">Anmelden</button><p class="hint">Noch kein Zugang oder Passwort vergessen? Bitte Pia oder Nelly kontaktieren.</p><button type="button" class="test-entry" onclick="startDemo()">Mit 6 Testprofilen ausprobieren</button><p class="hint">Der Testmodus verwendet keine echten Konten.</p></form></div>
 <p id="syncStatus" role="status" aria-live="polite"></p>
 <main id="appMain" hidden>
- <h1 id="screenTitle">Tag im Fokus</h1><p class="sub">Heider’s · Dein Team. Dein Plan.</p>
+ <h1 id="screenTitle" tabindex="-1">Tagesplan</h1><p class="sub">Heider’s · Dein Team. Dein Plan.</p>
  <div class="week-nav"><button onclick="changeWeek(-1)" aria-label="Vorherige Woche">❮</button><div><strong id="weekTitle"></strong><small id="weekRange"></small></div><button onclick="changeWeek(1)" aria-label="Nächste Woche">❯</button></div>
- <button id="exportPdfButton" onclick="exportPlanPdf()" class="secondary" style="margin-bottom:12px">Plan als PDF ↓</button>
+ <div class="week-options"><button id="specialDaysBtn" class="days-toggle" onclick="toggleSpecialDays()" aria-pressed="false">Mo &amp; So anzeigen</button><button id="exportPdfButton" onclick="exportPlanPdf()" class="secondary">Plan als PDF ↓</button></div>
  <div id="undoNotice" hidden></div>
  <section id="deadlinePanel" class="notice"></section>
- <details class="notice"><summary>Hinweise für diese Woche</summary><p id="noteDisplay"></p><button id="noteEditButton" onclick="toggleNoteEdit()">Bearbeiten</button><div id="noteEditBox" class="hidden"><textarea id="noteInput" rows="2" maxlength="4000" aria-label="Wochenhinweis"></textarea><button class="primary" onclick="saveWeekNote()">Speichern</button></div></details>
- <div id="adminControls" class="hidden"><div id="adminUserSelectWrapper" class="hidden"><label>Plan bearbeiten für <select id="userSelect" onchange="changeUser(this.value)"></select></label></div><button onclick="openSollModal()">Personalbedarf & Reservierungen</button><button onclick="startDemo()">Testmodus öffnen</button></div>
  <div id="tabCards"><div id="dayPickerCards" class="day-picker" aria-label="Tag auswählen"></div><div id="dailyCardsContainer"></div></div>
  <div id="tabWeek" class="hidden"><div id="dayPickerTeam" class="day-picker" aria-label="Tag der Gesamtübersicht auswählen"></div><div id="teamDayContainer"></div><div id="weekTableScroll" hidden><table><thead><tr id="weekTableHeader"></tr><tr id="weekReservationsRow"></tr></thead><tbody id="weekTableBody"></tbody></table></div></div>
  <div id="tabMyShifts" class="hidden"><p class="hint">Plan für <strong id="currentUserDisplay"></strong></p><div id="myShiftsList"></div></div>
  <div id="tabSpringer" class="hidden"><div id="springerContainer"></div></div>
- <button id="specialDaysBtn" onclick="toggleSpecialDays()" style="margin-top:12px">Mo/So anzeigen</button>
+ <details class="notice"><summary>Hinweise für diese Woche</summary><p id="noteDisplay"></p><button id="noteEditButton" onclick="toggleNoteEdit()">Bearbeiten</button><div id="noteEditBox" class="hidden"><textarea id="noteInput" rows="2" maxlength="4000" aria-label="Wochenhinweis"></textarea><button class="primary" onclick="saveWeekNote()">Speichern</button></div></details>
+ <div id="adminControls" class="hidden"><div id="adminUserSelectWrapper" class="hidden"><label>Plan bearbeiten für <select id="userSelect" onchange="changeUser(this.value)"></select></label></div><button onclick="openSollModal()">Personalbedarf & Reservierungen</button><button onclick="startDemo()">Testmodus öffnen</button></div>
+
  <div id="alarmBanner" hidden><span id="alarmIcon"></span><span id="alarmTitle"></span><span id="alarmMessage"></span></div>
 </main>
 <nav class="bottom-nav" aria-label="App-Navigation"><div class="nav-inner"><button id="tabCardsBtn" onclick="switchTab('cards')"><span class="nav-icon" aria-hidden="true">☀</span>Tagesplan</button><button id="tabWeekBtn" onclick="switchTab('week')"><span class="nav-icon" aria-hidden="true">▦</span>Gesamtplan</button><button id="tabMyShiftsBtn" onclick="switchTab('myShifts')"><span class="nav-icon" aria-hidden="true">✓</span>Mein Plan</button><button id="tabSpringerBtn" onclick="switchTab('springer')"><span class="nav-icon" aria-hidden="true">⇄</span>Springer</button><button onclick="openInbox()"><span class="nav-icon" aria-hidden="true">♧</span>Nachrichten <span id="unreadCount">0</span></button></div></nav>
@@ -76,7 +76,8 @@
 
     function toggleSpecialDays() {
       showSpecialDays = !showSpecialDays;
-      document.getElementById('specialDaysBtn').innerText = showSpecialDays ? 'Mo/So eingeblendet' : 'Mo/So anzeigen';
+      document.getElementById('specialDaysBtn').innerText = showSpecialDays ? '✓ Mo & So sichtbar' : 'Mo & So anzeigen';
+      document.getElementById('specialDaysBtn').setAttribute('aria-pressed',String(showSpecialDays));
       renderApp();
     }
 

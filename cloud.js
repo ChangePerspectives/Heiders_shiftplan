@@ -42,7 +42,7 @@ async function cloudSync() {
       cloudClient.from('profiles').select('id,name,job_role,is_admin,active').order('name'),
       cloudClient.from('shifts').select('*').eq('week',week),
       cloudClient.from('week_settings').select('*').eq('week',week).maybeSingle(),
-      cloudClient.rpc('get_reply_deadline',{p_week:getUpcomingPlanningWeek()}),
+      cloudClient.rpc('get_reply_deadline',{p_week:week}),
       cloudClient.rpc('get_notifications'),
       cloudClient.from('shift_transfers').select('*').eq('week',week).order('created_at',{ascending:false}),
       cloudClient.from('springer_pool').select('*').eq('week',week),
@@ -165,7 +165,7 @@ async function changeWeek(direction) {
   if(cloudBusy) return;
   closeSollModal();closeWithdrawal();document.getElementById('noteEditBox').classList.add('hidden');
   currentWeekStart.setDate(currentWeekStart.getDate()+direction*7);
-  cloudLoadedWeek=null;loadWeekData();renderApp();cloudStatus('Plan wird geladen …');await cloudSync();
+  cloudLoadedWeek=null;cloudDeadline=null;cloudRule=null;loadWeekData();renderApp();cloudStatus('Plan wird geladen …');await cloudSync();
   // Navigation bleibt auch bei Verbindungsfehler sichtbar; bereits geladene Woche wird als veraltet markiert.
   if(db[getWeekKey(currentWeekStart)]) {renderApp();document.getElementById('appMain').hidden=false;}
 }
@@ -177,8 +177,9 @@ function quickClaim(day,period) {
 function updateShift(day,period,value) {
   const person=team.find(p=>p.name===currentUser),week=getWeekKey(currentWeekStart);
   if(!person) return;
+  if(isPastShift(week,day)){cloudStatus('Vergangene Tage können nicht bearbeitet werden.',true);return;}
   const old=db[week]?.shifts[currentUser]?.[day]?.[period] || '-';
-  if(value==='-' && isScheduled(old)) return openWithdrawal(day,period);
+  if(isScheduled(old) && value!==old) return openWithdrawal(day,period);
   if(value===old && shiftAnswered(week,person.id,day,period)) {cloudStatus('Bereits eingetragen oder beantwortet.');return;}
   return cloudWrite('save_shift',{p_week:week,p_user:person.id,p_day:day,p_period:period,p_value:value,p_revision:cloudShiftRevisions.get([week,person.id,day,period].join('|')) || 0});
 }
@@ -299,7 +300,7 @@ function renderDeadline() {
 }
 async function openPlanningWeek(week) {
   if(cloudBusy)return;closeWithdrawal();closeSollModal();document.getElementById('noteEditBox').classList.add('hidden');
-  currentWeekStart=new Date(week+'T12:00:00');cloudLoadedWeek=null;loadWeekData();switchTab('myShifts');renderApp();await cloudSync();
+  currentWeekStart=new Date(week+'T12:00:00');cloudLoadedWeek=null;cloudDeadline=null;cloudRule=null;loadWeekData();switchTab('myShifts');renderApp();await cloudSync();
 }
 document.addEventListener('keydown',event=>{
   const modal=[document.getElementById('withdrawModal'),document.getElementById('inboxModal')].find(el=>el && !el.hidden);

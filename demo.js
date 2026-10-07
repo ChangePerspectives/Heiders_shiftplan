@@ -50,11 +50,12 @@ function demoExecute(name,a){
  if(name==='get_notifications')return demoInbox();
  if(name==='mark_notification_read'){demoAssert(demoInbox().items.some(n=>n.id===a.p_id));if(!demoStore.notification_reads.some(r=>r.notification_id===a.p_id&&r.user_id===actor.id))demoStore.notification_reads.push({notification_id:a.p_id,user_id:actor.id});return null;}
  if(name==='save_shift'||name==='withdraw_shift'){
+ demoAssert(!isPastShift(a.p_week,a.p_day),'Vergangene Tage können nicht bearbeitet werden','22023');
  demoOwn(a.p_user);const s=demoShift(a.p_week,a.p_user,a.p_day,a.p_period,true);demoAssert(s.revision===a.p_revision,'Zwischenzeitlich geändert','40001');
  if(name==='save_shift'){
  demoAssert(['-','se','kü','th','u','k','f'].includes(a.p_value),'Ungültige Eingabe','22023');
  demoAssert(!(s.value===a.p_value&&s.revision>0),'Bereits beantwortet','23505');
- demoAssert(!(isScheduled(s.value)&&!isScheduled(a.p_value)),'Bitte Austragen-Funktion verwenden','22023');s.value=a.p_value;s.revision++;return null;
+ demoAssert(!(isScheduled(s.value)&&s.value!==a.p_value),'Bitte Austragen-Funktion verwenden','22023');s.value=a.p_value;s.revision++;return null;
  }
  demoAssert(isScheduled(s.value),'Keine eingetragene Schicht','22023');const late=Date.now()>Date.parse(demoDeadline(a.p_week).deadline);
  demoAssert(!late||['Vertan','Kann nicht kommen'].includes(a.p_reason),'Frist abgelaufen: Bitte Grund auswählen','22023');
@@ -64,12 +65,13 @@ function demoExecute(name,a){
  const undo={id:demoId(),actor_id:actor.id,week:a.p_week,user_id:a.p_user,day:a.p_day,period:a.p_period,old_value:old,after_revision:s.revision,undo_until:new Date(Date.now()+120000).toISOString(),notification_id:notice,used:false};demoStore.undos.push(undo);return {id:undo.id,undo_until:undo.undo_until,late};
  }
  if(name==='undo_withdrawal'){
- const u=demoStore.undos.find(u=>u.id===a.p_id&&u.actor_id===actor.id);demoAssert(u);demoAssert(!u.used&&Date.now()<Date.parse(u.undo_until),'Rückgängig-Frist abgelaufen','22023');const s=demoShift(u.week,u.user_id,u.day,u.period);demoAssert(s?.revision===u.after_revision&&s.value==='-','Schicht wurde inzwischen geändert','40001');s.value=u.old_value;s.revision++;u.used=true;demoStore.notifications=demoStore.notifications.filter(n=>n.id!==u.notification_id);return null;
+ const u=demoStore.undos.find(u=>u.id===a.p_id&&u.actor_id===actor.id);demoAssert(u);demoAssert(!u.used&&Date.now()<Date.parse(u.undo_until),'Rückgängig-Frist abgelaufen','22023');demoAssert(!isPastShift(u.week,u.day),'Vergangene Tage können nicht bearbeitet werden','22023');const s=demoShift(u.week,u.user_id,u.day,u.period);demoAssert(s?.revision===u.after_revision&&s.value==='-','Schicht wurde inzwischen geändert','40001');s.value=u.old_value;s.revision++;u.used=true;demoStore.notifications=demoStore.notifications.filter(n=>n.id!==u.notification_id);return null;
  }
  if(name==='save_springer'){
  demoOwn(a.p_user);let p=demoStore.springer_pool.find(p=>p.week===a.p_week&&p.user_id===a.p_user);demoAssert((p?.revision||0)===a.p_revision,'Zwischenzeitlich geändert','40001');demoAssert(a.p_note.length<=300,'Hinweis zu lang','22023');if(!p){p={week:a.p_week,user_id:a.p_user,revision:0};demoStore.springer_pool.push(p);}Object.assign(p,{available:a.p_available,note:a.p_note,revision:p.revision+1});return null;
  }
  if(name==='request_transfer'){
+ demoAssert(!isPastShift(a.p_week,a.p_day),'Vergangene Tage können nicht bearbeitet werden','22023');
  demoOwn(a.p_user);demoAssert(a.p_user!==a.p_target&&demoStore.profiles.some(p=>p.id===a.p_target&&p.active),'Ungültiger Ersatz','22023');
  const s=demoShift(a.p_week,a.p_user,a.p_day,a.p_period),target=demoShift(a.p_week,a.p_target,a.p_day,a.p_period,true);
  demoAssert(s?.revision===a.p_revision,'Zwischenzeitlich geändert','40001');demoAssert(isScheduled(s.value),'Keine eingetragene Schicht','22023');demoAssert(!['se','kü','th','u','k'].includes(target.value),'Ersatz bereits eingetragen oder abwesend','22023');
@@ -81,7 +83,7 @@ function demoExecute(name,a){
  if(name==='respond_transfer'){
  const t=demoStore.shift_transfers.find(t=>t.id===a.p_id);demoAssert(t&&t.taker_id===actor.id,'Nur die angefragte Person kann bestätigen');demoAssert(t.status==='pending','Anfrage nicht mehr offen','40001');
  if(demoEffective(t)==='stale'){t.status='stale';return null;}
- if(a.p_accept){const s=demoShift(t.week,t.giver_id,t.day,t.period),target=demoShift(t.week,t.taker_id,t.day,t.period);s.value='-';s.revision++;target.value=t.shift_value;target.revision++;t.status='accepted';if(Date.now()>Date.parse(demoDeadline(t.week).deadline))demoNotice('transfer','admins','Schichtübernahme bestätigt',personName(t.giver_id)+' → '+personName(t.taker_id)+' · '+t.day+' · '+t.period,t.week);}
+ if(a.p_accept){demoAssert(!isPastShift(t.week,t.day),'Vergangene Tage können nicht bearbeitet werden','22023');const s=demoShift(t.week,t.giver_id,t.day,t.period),target=demoShift(t.week,t.taker_id,t.day,t.period);s.value='-';s.revision++;target.value=t.shift_value;target.revision++;t.status='accepted';if(Date.now()>Date.parse(demoDeadline(t.week).deadline))demoNotice('transfer','admins','Schichtübernahme bestätigt',personName(t.giver_id)+' → '+personName(t.taker_id)+' · '+t.day+' · '+t.period,t.week);}
  else t.status='rejected';
  demoNotice('transfer','user',a.p_accept?'Übernahme bestätigt':'Übernahme abgelehnt',personName(t.taker_id)+(a.p_accept?' übernimmt deine Schicht.':' kann nicht übernehmen. Bitte anderen Ersatz anfragen.'),t.week,t.giver_id);return null;
  }
