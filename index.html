@@ -13,21 +13,26 @@
     .custom-scrollbar::-webkit-scrollbar-track { background: #F5EFEE; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #C5A059; border-radius: 3px; }
     
-    /* Fixierte Mitarbeiter-Spalte beim Scrollen */
+    /* WICHTIG: border-separate löst den Sticky-Fehler in allen Browsern & Handys */
+    table.sticky-table {
+      border-collapse: separate !important;
+      border-spacing: 0 !important;
+    }
     .sticky-col {
       position: -webkit-sticky !important;
       position: sticky !important;
       left: 0 !important;
       background-color: #FFFFFF !important;
       z-index: 10 !important;
-      box-shadow: 2px 0 5px -2px rgba(0, 0, 0, 0.15);
+      border-right: 2px solid #E5E7EB !important;
+      box-shadow: 2px 0 5px -2px rgba(0, 0, 0, 0.12);
     }
     th.sticky-col {
       background-color: #F5EFEE !important;
       z-index: 20 !important;
     }
     tr.user-highlight .sticky-col {
-      background-color: #FEF3C7 !important; /* Hervorhebung für den eigenen Namen */
+      background-color: #FEF3C7 !important;
     }
   </style>
 </head>
@@ -144,10 +149,10 @@
         </div>
         
         <div class="overflow-x-auto custom-scrollbar">
-          <table class="w-full text-left text-xs border-collapse min-w-[720px]">
+          <table class="w-full text-left text-xs min-w-[750px] sticky-table">
             <thead>
               <tr class="bg-[#F5EFEE] text-[#6B1D2F] font-bold border-b border-stone-200" id="tableHeaderRow">
-                <th class="p-2 w-32 sticky-col border-r border-stone-200">Mitarbeiter</th>
+                <th class="p-2 w-32 sticky-col">Mitarbeiter</th>
               </tr>
             </thead>
             <tbody id="fullPlanTableBody" class="divide-y divide-stone-100">
@@ -160,7 +165,7 @@
         <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block"></span> Service/Theke (se/th)</span>
         <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-600 inline-block"></span> Küche (kü)</span>
         <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block"></span> Springer (S)</span>
-        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-100 border border-red-300 inline-block"></span> Rot = Fehlbedarf</span>
+        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span> Rot = Schicht unterbesetzt</span>
       </div>
     </div>
 
@@ -202,6 +207,7 @@
     let showSpecialDays = false;
     let activeTab = 'myShifts';
 
+    // Alle 8 Wochen aus der Vorlage "Dienstplan-Vorlage-Heiders_3.xlsx"
     const seedDB = {
       "2026-10-05": {
         "events": { "do": "Lesung - 45 Leute am Abend" },
@@ -678,7 +684,7 @@
       const weekData = db[weekKey];
 
       const headerRow = document.getElementById('tableHeaderRow');
-      headerRow.innerHTML = `<th class="p-2 w-32 sticky-col border-r border-stone-200">Mitarbeiter</th>`;
+      headerRow.innerHTML = `<th class="p-2 w-32 sticky-col">Mitarbeiter</th>`;
 
       daysOfWeek.forEach((dayObj, index) => {
         if (dayObj.isSpecial && !showSpecialDays) return;
@@ -686,24 +692,30 @@
         const dayKey = dayObj.key;
         const soll = weekData.soll[dayKey] || { tag: 0, abend: 0 };
 
-        let dayHasIssue = false;
-        ['tag', 'abend'].forEach(s => {
-          let count = 0;
-          let kitchen = false;
-          team.forEach(m => {
-            const v = weekData.shifts[m.name]?.[dayKey]?.[s] || '-';
-            if (v !== '-' && !['u', 'k', 'f'].includes(v.toLowerCase())) count++;
-            if (v.toLowerCase().includes('kü')) kitchen = true;
-          });
-          if (count < (soll[s]||0) || (!kitchen && (soll[s]||0) > 0)) dayHasIssue = true;
+        let countTag = 0, kitchenTag = false;
+        let countAbend = 0, kitchenAbend = false;
+
+        team.forEach(m => {
+          const vt = weekData.shifts[m.name]?.[dayKey]?.tag || '-';
+          const va = weekData.shifts[m.name]?.[dayKey]?.abend || '-';
+
+          if (vt !== '-' && !['u', 'k', 'f'].includes(vt.toLowerCase())) countTag++;
+          if (vt.toLowerCase().includes('kü')) kitchenTag = true;
+
+          if (va !== '-' && !['u', 'k', 'f'].includes(va.toLowerCase())) countAbend++;
+          if (va.toLowerCase().includes('kü')) kitchenAbend = true;
         });
 
+        const tagIssue = countTag < (soll.tag || 0) || (!kitchenTag && (soll.tag || 0) > 0);
+        const abendIssue = countAbend < (soll.abend || 0) || (!kitchenAbend && (soll.abend || 0) > 0);
+
         headerRow.innerHTML += `
-          <th class="p-1.5 text-center border-r border-stone-200 min-w-[85px] ${dayHasIssue ? 'bg-red-100/90 text-red-900 border-b-2 border-b-red-600' : ''}">
+          <th class="p-1.5 text-center border-r border-stone-200 min-w-[90px]">
             <div class="font-bold text-xs">${dayObj.label}</div>
-            <div class="text-[10px] ${dayHasIssue ? 'text-red-700 font-bold' : 'text-stone-500'}">${dateStr}</div>
-            <div class="flex justify-around text-[9px] mt-1 font-normal">
-              <span>T (Soll:${soll.tag})</span><span>A (Soll:${soll.abend})</span>
+            <div class="text-[10px] text-stone-500 mb-1">${dateStr}</div>
+            <div class="grid grid-cols-2 gap-0.5 text-[9px] font-bold">
+              <span class="p-0.5 rounded ${tagIssue ? 'bg-red-500 text-white' : 'bg-stone-100 text-stone-700'}">T:${soll.tag}</span>
+              <span class="p-0.5 rounded ${abendIssue ? 'bg-red-500 text-white' : 'bg-stone-100 text-stone-700'}">A:${soll.abend}</span>
             </div>
           </th>
         `;
@@ -717,7 +729,8 @@
         const isCurrent = m.name === currentUser;
         tr.className = isCurrent ? 'user-highlight font-medium' : 'hover:bg-stone-50';
 
-        let nameTd = `<td class="p-2 font-bold text-[#2B2321] sticky-col border-r border-stone-200 flex flex-col">
+        // Jede Zelle der 1. Spalte erhält explizit class="sticky-col"
+        let nameTd = `<td class="p-2 font-bold text-[#2B2321] sticky-col flex flex-col">
           <span>${m.name}</span>
           <span class="text-[9px] text-stone-500 font-normal">${m.role}</span>
         </td>`;
