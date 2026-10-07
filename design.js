@@ -83,13 +83,9 @@ function renderMyShiftsTab(){
 }
 function renderApp(){
  const week=getWeekKey(currentWeekStart);loadWeekData();
- const end=getDateForDay(6);
- const short=date=>date.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
- document.getElementById('weekTitle').textContent=currentWeekStart.getFullYear()===end.getFullYear()?`${short(currentWeekStart)} – ${short(end)}${end.getFullYear()}`:`${short(currentWeekStart)}${currentWeekStart.getFullYear()} – ${short(end)}${end.getFullYear()}`;
- const thursday=new Date(getWeekKey(currentWeekStart)+'T12:00:00Z');thursday.setUTCDate(thursday.getUTCDate()+3);
- const isoYear=thursday.getUTCFullYear(),yearStart=new Date(Date.UTC(isoYear,0,1,12));
- const kw=Math.ceil(((thursday-yearStart)/86400000+1)/7);
- document.getElementById('weekRange').textContent=`Kalenderwoche ${kw} · ${isoYear}`;
+ document.getElementById('weekTitle').textContent=compactWeekRange(week);
+ document.getElementById('weekRange').textContent=calendarWeekLabel(week);
+ document.getElementById('planWeek').value=week;
  document.getElementById('noteDisplay').textContent=db[week].note||'Hier können Pia und Nelly Informationen für die ganze Woche hinterlegen, zum Beispiel Veranstaltungen oder besondere Aufgaben. Reservierungen werden separat pro Tag und Schicht erfasst.';
  document.getElementById('weekNotesButton').textContent=db[week].note?.trim()?'Hinweise für die Woche · vorhanden':'Hinweise für die Woche';
  document.getElementById('weekNotes').classList.toggle('has-note',!!db[week].note?.trim());
@@ -210,6 +206,7 @@ function notificationContent(n){
  return `<p class="message-body">${escapeHtml(sentence)}</p><div class="notification-shift"><strong>${escapeHtml(date)}</strong><span>${shift} · ab ${t.period==='tag'?'10:30':'15:00'} Uhr</span><span>Aufgabe: ${escapeHtml(shiftRoleLabel(t.role))}</span></div>${t.note?`<p class="hint">Nachricht: ${escapeHtml(t.note)}</p>`:''}${pending?`<p class="hint">Bis zur Bestätigung bleibt ${escapeHtml(t.giver)} eingetragen.</p><div class="actions"><button class="primary" ${locked?'disabled':''} onclick="respondTransfer('${t.id}',true)">Übernehmen</button><button onclick="respondTransfer('${t.id}',false)">Ablehnen</button></div>`:''}${n.title==='Schichtübernahme angefragt'&&t.status!=='pending'?`<p class="hint">${({accepted:'Diese Anfrage wurde bereits bestätigt.',rejected:'Diese Anfrage wurde abgelehnt.',cancelled:'Diese Anfrage wurde zurückgezogen.',stale:'Der Plan wurde geändert; diese Anfrage ist nicht mehr gültig.'})[t.status]||'Diese Anfrage ist erledigt.'}</p>`:''}<button class="message-plan-link" onclick="closeInbox();openCapacityWeek('${n.week}','${t.day}')">Schicht im Tagesplan ansehen →</button>`;
 }
 function renderInbox(){
+ document.getElementById('inboxTopButton').hidden=(cloudInbox.items?.length||0)<2;
  const count=cloudInbox.unread||0;document.getElementById('unreadCount').textContent=count;document.getElementById('unreadCount').hidden=count===0;document.getElementById('inboxButton').classList.toggle('has-unread',count>0);document.getElementById('inboxButton').setAttribute('aria-label',count?'Nachrichten, '+count+' ungelesen':'Nachrichten');
  document.getElementById('inboxMessages').innerHTML=cloudInbox.items?.length?cloudInbox.items.map(n=>`<article class="message-card"><strong>${escapeHtml(n.title)}</strong><p class="hint">${escapeHtml(new Date(n.created_at).toLocaleString('de-DE'))} · ${n.is_read?'Gelesen':'Neu'}</p>${notificationContent(n)}${!n.transfer&&n.kind==='transfer'?`<button onclick="closeInbox();openPlanningWeek('${n.week}')">Planungswoche ansehen →</button>`:''}${!n.is_read?`<button onclick="readNotification('${n.id}')">Als gelesen markieren</button>`:''}</article>`).join(''):'<p>Noch keine Nachrichten.</p>';
 }
@@ -239,7 +236,30 @@ changeWeek=async function(direction){if(cloudBusy)return;closeTransfer();closeWe
 setInterval(renderUndo,1000);
 switchTab('cards');
 let settingsMode='bedarf',settingsSnapshot=null,planEditor=null,planEditorRequest=0;
-function editorWeekLabel(week){const end=shiftDateKey(week,'so');const fmt=s=>new Date(s+'T12:00:00Z').toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric',timeZone:'Europe/Berlin'});return fmt(week)+' – '+fmt(end);}
+function compactWeekRange(week){
+ const end=shiftDateKey(week,'so'),startYear=week.slice(0,4),endYear=end.slice(0,4);
+ const short=key=>key.slice(8,10)+'.'+key.slice(5,7)+'.';
+ return short(week)+(startYear!==endYear?startYear:'')+' – '+short(end)+endYear;
+}
+function calendarWeekLabel(week){
+ const thursday=new Date(week+'T12:00:00Z');thursday.setUTCDate(thursday.getUTCDate()+3);
+ const year=thursday.getUTCFullYear(),start=new Date(Date.UTC(year,0,1,12));
+ return 'KW '+Math.ceil(((thursday-start)/86400000+1)/7);
+}
+function selectedMonday(value){
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(value)||Number.isNaN(Date.parse(value+'T12:00:00Z')))return null;
+ const date=new Date(value+'T12:00:00Z');date.setUTCDate(date.getUTCDate()-(date.getUTCDay()+6)%7);return date.toISOString().slice(0,10);
+}
+async function selectPlanWeek(value){
+ const current=getWeekKey(currentWeekStart),week=selectedMonday(value);document.getElementById('planWeek').value=current;
+ if(!week||week===current||cloudBusy)return;
+ return changeWeek((Date.parse(week+'T12:00:00Z')-Date.parse(current+'T12:00:00Z'))/604800000);
+}
+function inboxToTop(){
+ document.getElementById('inboxPanel').scrollTo({top:0,behavior:'smooth'});
+ document.getElementById('inboxTitle').focus({preventScroll:true});
+}
+function editorWeekLabel(week){return compactWeekRange(week);}
 function editorMessage(text,error=false){const el=document.getElementById('editorStatus');el.textContent=text;el.classList.toggle('editor-error',error);}
 function editorBusy(busy){if(planEditor)planEditor.busy=busy;document.querySelectorAll('#sollModal input,#sollModal textarea,#sollModal select,#sollModal button').forEach(el=>el.disabled=busy);}
 function editorValues(){
@@ -252,7 +272,7 @@ function editorDirty(){return !!planEditor&&JSON.stringify(editorValues())!==pla
 function renderPlanEditor(data){
  settingsSnapshot=structuredClone(data);const week=planEditor.week;
  document.getElementById('sollTitle').textContent=({bedarf:'Bedarf',reservierungen:'Reservierungen',hinweise:'Hinweise für die Woche'})[settingsMode];
- document.getElementById('editorWeek').value=week;document.getElementById('editorWeekLabel').textContent=editorWeekLabel(week);
+ document.getElementById('editorWeek').value=week;document.getElementById('editorWeekLabel').textContent=editorWeekLabel(week);document.getElementById('editorWeekKW').textContent=calendarWeekLabel(week);
  document.getElementById('sollModalContent').innerHTML=settingsMode==='hinweise'?`<label class="note-editor-label" for="editorNote">Wochenhinweis bearbeiten</label><p class="hint">Gilt für die gesamte Woche. Zum Löschen den Text entfernen und speichern.</p><textarea id="editorNote" rows="10" maxlength="4000" placeholder="Informationen, Veranstaltungen oder besondere Aufgaben für diese Woche …">${escapeHtml(data.note||'')}</textarea>`:daysOfWeek.map(d=>`<section class="plain-card"><h3>${d.label}, ${new Date(shiftDateKey(week,d.key)+'T12:00:00Z').toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',timeZone:'Europe/Berlin'})}</h3>${['tag','abend'].map(period=>settingsMode==='bedarf'?`<label>Benötigte Personen · ${period==='tag'?'Tag':'Abend'}<input type="number" id="soll_${d.key}_${period}" value="${Number(data.soll[d.key]?.[period])||0}" min="0" max="50" step="1"></label>`:`<label>Reservierungen · ${period==='tag'?'Tag':'Abend'}<textarea id="res_${d.key}_${period}" rows="3" maxlength="300" placeholder="Uhrzeit · Personen · Hinweis">${escapeHtml((period==='tag'?data.resTag:data.resAbend)?.[d.key]||'')}</textarea></label>`).join('')}</section>`).join('');
  planEditor.baseline=JSON.stringify(editorValues());document.getElementById('sollModalContent').scrollTop=0;
  editorMessage('Woche auswählen und Einträge bearbeiten.');

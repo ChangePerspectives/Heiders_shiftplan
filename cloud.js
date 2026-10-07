@@ -269,7 +269,7 @@ async function confirmWithdrawal() {
   } finally {button.disabled=false;}
 }
 function openInbox() {
-  modalReturnFocus=document.activeElement;renderInbox();document.getElementById('inboxModal').hidden=false;
+  modalReturnFocus=document.activeElement;renderInbox();document.getElementById('inboxModal').hidden=false;document.getElementById('inboxPanel').scrollTop=0;
   document.querySelector('#inboxModal button').focus();
 }
 function closeInbox() {

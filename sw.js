@@ -1,5 +1,5 @@
 // Bei jeder Veröffentlichung CACHE_VERSION ändern (oder dieses Paket vollständig ersetzen).
-const CACHE_VERSION = 'v4-7-week-editors-20261007';
+const CACHE_VERSION = 'v4-8-compact-week-picker-20261007';
 const PREFIX = 'heiders-app-';
 const CACHE = PREFIX + CACHE_VERSION;
 const SHELL = ["./", "./index.html", "./cloud.js", "./config.js", "./supabase.js", "./design.css", "./design.js", "./demo.js", "./manifest.webmanifest", "./icon-192-v2.png", "./icon-512-v2.png", "./icon-maskable-512-v2.png", "./apple-touch-icon-v2.png", "./jspdf.js", "./pdf-font.js", "./pdf-export.js"];
