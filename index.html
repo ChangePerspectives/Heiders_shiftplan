@@ -27,14 +27,14 @@
       position: sticky;
       top: 0;
       z-index: 50 !important;
-      background-color: #8C1D40; /* Original Heider's Weinrot */
+      background-color: #8C1D40;
     }
 
     .badge-se { background-color: #E6F4EA; color: #137333; border: 1px solid #CEEAD6; }
     .badge-kü { background-color: #FEF7E0; color: #B06000; border: 1px solid #FDE293; }
     .badge-s { background-color: #E8F0FE; color: #1A73E8; border: 1px solid #AECBFA; }
 
-    /* Sticky Tabelle für Wochenübersicht */
+    /* Sticky Tabelle für Wochenübersicht - Optimiert für breitere Spalten & Zeilentrennung */
     table.sticky-table {
       border-collapse: separate !important;
       border-spacing: 0 !important;
@@ -43,13 +43,14 @@
       position: -webkit-sticky !important;
       position: sticky !important;
       left: 0 !important;
-      background-color: #FFFFFF !important;
       z-index: 10 !important;
-      min-width: 120px !important;
-      border-right: 2px solid #E5E7EB !important;
+      min-width: 90px !important;
+      max-width: 95px !important;
+      border-right: 2px solid #D1D5DB !important;
+      box-shadow: 2px 0 4px -1px rgba(0, 0, 0, 0.1);
     }
     th.sticky-col {
-      background-color: #F8F6F0 !important;
+      background-color: #F3EFEA !important;
       z-index: 15 !important;
     }
   </style>
@@ -59,7 +60,7 @@
   <!-- Header: Original Heider's Weinrot mit vektorbasiertem SVG-Logo -->
   <header class="app-header shadow-md p-2.5 border-b border-[#C5A059]/40">
     <div class="max-w-md mx-auto flex justify-between items-center gap-2">
-      <!-- Nahtlos gerendertes Logo (Kein Laden/Fragezeichen) -->
+      <!-- Nahtlos gerendertes Logo (SVG) -->
       <div class="bg-white px-2.5 py-1.5 rounded-xl shadow-md border border-[#C5A059]/50 flex items-center justify-center">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 120" class="h-9 sm:h-10 w-auto">
           <text x="10" y="70" font-family="'Segoe Script', 'Brush Script MT', cursive, sans-serif" font-size="62" font-weight="bold" fill="#5A5553">Heider</text>
@@ -154,18 +155,18 @@
       <div id="dailyCardsContainer" class="space-y-3"></div>
     </div>
 
-    <!-- TAB 2: NORMALE GESAMTWENÜBERSICHT (MATRIX TABELLE) -->
+    <!-- TAB 2: NORMALE GESAMTWENÜBERSICHT (OPTIMIERTE MATRIX TABELLE) -->
     <div id="tabWeek" class="hidden space-y-3">
       <div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden p-2">
         <div class="text-xs font-bold text-[#8C1D40] mb-2 px-1">📊 Auslastung & Gesamtplan aller Mitarbeiter</div>
         <div class="overflow-x-auto">
-          <table class="w-full text-left text-[11px] sticky-table min-w-[500px]">
+          <table class="w-full text-left text-xs sticky-table min-w-[540px]">
             <thead>
-              <tr id="weekTableHeader" class="bg-stone-100 font-bold text-[#8C1D40] border-b border-stone-200">
-                <th class="p-1.5 sticky-col">Mitarbeiter</th>
+              <tr id="weekTableHeader" class="bg-stone-100 font-bold text-[#8C1D40] border-b border-stone-300">
+                <th class="p-2 sticky-col">Mitarbeiter</th>
               </tr>
             </thead>
-            <tbody id="weekTableBody" class="divide-y divide-stone-100"></tbody>
+            <tbody id="weekTableBody"></tbody>
           </table>
         </div>
       </div>
@@ -558,20 +559,21 @@
       });
     }
 
+    /* BESSER LESBARE WOCHENÜBERSICHT TABELLE MIT GEKÜRZTER MITARBEITERSPALTE UND ZEILENTRENNUNG */
     function renderWeekOverviewTable() {
       const weekKey = getWeekKey(currentWeekStart);
       const weekData = db[weekKey];
 
       const headerRow = document.getElementById('weekTableHeader');
-      headerRow.innerHTML = `<th class="p-1.5 sticky-col">Mitarbeiter</th>`;
+      headerRow.innerHTML = `<th class="p-2 sticky-col">Mitarbeiter</th>`;
 
       daysOfWeek.forEach((dayObj, index) => {
         if (dayObj.isSpecial && !showSpecialDays) return;
         const dateStr = formatDateShort(getDateForDay(index));
         headerRow.innerHTML += `
-          <th class="p-1 text-center border-r border-stone-200 min-w-[55px]">
-            <div class="font-bold text-[10px]">${dayObj.label.slice(0, 2)}</div>
-            <div class="text-[8px] text-stone-500">${dateStr}</div>
+          <th class="p-1.5 text-center border-r border-stone-200 min-w-[65px]">
+            <div class="font-bold text-xs text-[#8C1D40]">${dayObj.label.slice(0, 2)}</div>
+            <div class="text-[9px] text-stone-500">${dateStr}</div>
           </th>
         `;
       });
@@ -579,12 +581,15 @@
       const tbody = document.getElementById('weekTableBody');
       tbody.innerHTML = '';
 
-      team.forEach(m => {
+      team.forEach((m, idx) => {
         const tr = document.createElement('tr');
-        tr.className = m.name === currentUser ? 'bg-amber-50 font-bold' : '';
+        // Zeilentrennung & abwechselnde Farben für optimale Übersicht
+        const isUser = m.name === currentUser;
+        const bgClass = isUser ? 'bg-amber-100/70 font-bold' : (idx % 2 === 0 ? 'bg-white' : 'bg-stone-50/70');
+        tr.className = `${bgClass} border-b-2 border-stone-200/80 hover:bg-amber-50`;
 
-        let nameTd = `<td class="p-1.5 sticky-col text-[10px]">
-          <span class="font-bold block">${m.name}</span>
+        let nameTd = `<td class="p-2 sticky-col ${isUser ? 'bg-amber-100' : 'bg-white'} border-r-2 border-stone-300">
+          <span class="font-bold text-xs text-[#2B2321] block leading-tight">${m.name}</span>
         </td>`;
 
         let daysTds = '';
@@ -594,15 +599,15 @@
 
           const formatCell = (val) => {
             if (val === '-') return `<span class="text-stone-300">-</span>`;
-            if (val.toLowerCase().includes('kü')) return `<span class="px-1 bg-amber-100 text-amber-900 rounded font-bold text-[9px]">${val}</span>`;
-            return `<span class="px-1 bg-emerald-100 text-emerald-800 rounded font-bold text-[9px]">${val}</span>`;
+            if (val.toLowerCase().includes('kü')) return `<span class="px-1 py-0.5 bg-amber-100 text-amber-900 rounded font-bold text-[10px] border border-amber-300">${val}</span>`;
+            return `<span class="px-1 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold text-[10px] border border-emerald-300">${val}</span>`;
           };
 
           daysTds += `
-            <td class="p-1 border-r border-stone-200 text-center text-[9px]">
-              <div class="space-y-0.5">
-                <div>${formatCell(shift.tag)}</div>
-                <div>${formatCell(shift.abend)}</div>
+            <td class="p-1.5 border-r border-stone-200 text-center text-xs align-middle">
+              <div class="flex flex-col gap-1 items-center justify-center">
+                ${formatCell(shift.tag)}
+                ${formatCell(shift.abend)}
               </div>
             </td>
           `;
