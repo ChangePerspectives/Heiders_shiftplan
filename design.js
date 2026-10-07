@@ -59,10 +59,10 @@ function dayMarkup(edit){
  const staff=team.filter(p=>isScheduled(data.shifts[p.name]?.[day]?.[period]));
  const absences=team.filter(p=>['u','k','f'].includes(data.shifts[p.name]?.[day]?.[period]));
  const needed=data.soll[day]?.[period]||0,open=Math.max(0,needed-staff.length),excess=Math.max(0,staff.length-needed),res=(period==='tag'?data.resTag:data.resAbend)?.[day];
- html+=`<article class="shift-card"><div class="shift-heading"><h3>${period==='tag'?'☀ Tagschicht':'☾ Abendschicht'}</h3><span class="${open||excess?'open-slot':'occupancy'}">${excess?excess+' zu viel · '+staff.length+'/'+needed+' besetzt':open?open+' '+(open===1?'Platz frei':'Plätze frei'):staff.length+' von '+needed+' besetzt'}</span></div><p class="hint">${period==='tag'?'Ab 10:30 Uhr':'Ab 15:00 Uhr'}</p><ul class="roster">${staff.map(p=>{
+ html+=`<article class="shift-card"><div class="shift-heading"><h3>${period==='tag'?'☀ Tagschicht':'☾ Abendschicht'}</h3><span class="${open||excess?'open-slot':needed>0?'occupancy is-complete':'occupancy'}">${excess?excess+' zu viel · '+staff.length+'/'+needed+' besetzt':open?open+' '+(open===1?'Platz frei':'Plätze frei'):(needed>0?'✓ ':'')+staff.length+' von '+needed+' besetzt'}</span></div><p class="hint">${period==='tag'?'Ab 10:30 Uhr':'Ab 15:00 Uhr'}</p><div class="reservation ${res?.trim()?'has-reservation':''}"><strong>${res?.trim()?'📌 ':''}Reservierungen · ${period==='tag'?'Tag':'Abend'}</strong>${res?escapeHtml(res):'Keine Reservierungen hinterlegt.'}</div><ul class="roster">${staff.map(p=>{
  const transfer=pendingFor(p.id,day,period);
  return `<li><div class="person-line"><strong>${escapeHtml(p.name)}</strong><span>${escapeHtml(shiftRoleLabel(data.shifts[p.name][day][period]))}</span></div>${shiftTimeHint(p.name,day,period)}${data.shifts[p.name][day][period]==='offen'&&!transfer&&!isShiftLocked(getWeekKey(currentWeekStart),day,period)&&(cloudActor?.is_admin||cloudActor?.id===p.id)&&(!edit||p.name!==currentUser)?roleConfirmationButtons(p.id,day,period):''}${transfer?`<div class="transfer-status">Übernahme bei ${escapeHtml(personName(transfer.taker_id))} angefragt · Bestätigung offen</div>`:''}</li>`;
- }).join('')}</ul>${!staff.length?'<p class="hint">Noch niemand eingetragen.</p>':''}${absences.length?`<p class="absence-line">Abwesend / frei: ${absences.map(p=>escapeHtml(p.name)+' ('+escapeHtml(shiftRoleLabel(data.shifts[p.name][day][period]))+')').join(', ')}</p>`:''}<div class="reservation ${res?.trim()?'has-reservation':''}"><strong>${res?.trim()?'📌 ':''}Reservierungen · ${period==='tag'?'Tag':'Abend'}</strong>${res?escapeHtml(res):'Keine Reservierungen hinterlegt.'}</div>${edit?renderClaimAction(day,period):''}</article>`;
+ }).join('')}</ul>${!staff.length?'<p class="hint">Noch niemand eingetragen.</p>':''}${absences.length?`<p class="absence-line">Abwesend / frei: ${absences.map(p=>escapeHtml(p.name)+' ('+escapeHtml(shiftRoleLabel(data.shifts[p.name][day][period]))+')').join(', ')}</p>`:''}${edit?renderClaimAction(day,period):''}</article>`;
  }
  return html;
 }
@@ -232,21 +232,106 @@ submitTransfer=async function(){if(transferContext?.choosing){const [day,period]
 document.addEventListener('keydown',event=>{
  const modal=[document.getElementById('transferModal'),document.getElementById('sollModal')].find(el=>!el.hidden&&!el.classList.contains('hidden'));if(!modal)return;
  if(event.key==='Escape'){event.preventDefault();modal.id==='transferModal'?closeTransfer():closeSollModal();}
- if(event.key==='Tab'){const items=[...modal.querySelectorAll('button,select,textarea')].filter(el=>!el.disabled&&!el.closest('[hidden]'));const first=items[0],last=items.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}}
+ if(event.key==='Tab'){const focusRoot=modal.id==='sollModal'&&!document.getElementById('editorConfirm').hidden?document.getElementById('editorConfirm'):modal;const items=[...focusRoot.querySelectorAll('button,input,select,textarea')].filter(el=>!el.disabled&&!el.closest('[hidden]'));const first=items[0],last=items.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}}
 });
 const legacyChangeWeek=changeWeek;
 changeWeek=async function(direction){if(cloudBusy)return;closeTransfer();closeWeekNotices();return legacyChangeWeek(direction);};
 setInterval(renderUndo,1000);
 switchTab('cards');
-let settingsMode='bedarf',settingsSnapshot=null;
-function openSollModal(mode='bedarf'){
- if(!cloudActor?.is_admin)return;
- settingsMode=mode==='reservierungen'?'reservierungen':'bedarf';
- const week=getWeekKey(currentWeekStart),data=db[week];if(!data)return;cloudEditWeek=week;cloudSettingsRevision=data.settingsRevision||0;settingsSnapshot=structuredClone(data);
- document.getElementById('sollTitle').textContent=(settingsMode==='bedarf'?'Bedarf':'Reservierungen')+' · '+document.getElementById('weekTitle').textContent;
- document.getElementById('sollModalContent').innerHTML=daysOfWeek.map((d,index)=>`<section class="plain-card"><h3>${d.label}, ${formatDateShort(getDateForDay(index))}</h3>${['tag','abend'].map(period=>settingsMode==='bedarf'?`<label>Benötigte Personen · ${period==='tag'?'Tag':'Abend'}<input style="width:100%;margin:5px 0 10px" type="number" id="soll_${d.key}_${period}" value="${Number(data.soll[d.key]?.[period])||0}" min="0" max="50" step="1"></label>`:`<label>Reservierungen · ${period==='tag'?'Tag':'Abend'}<textarea id="res_${d.key}_${period}" rows="2" maxlength="300" placeholder="Uhrzeit · Personen · Hinweis">${escapeHtml((period==='tag'?data.resTag:data.resAbend)?.[d.key]||'')}</textarea></label>`).join('')}</section>`).join('');
- document.getElementById('sollModal').classList.remove('hidden');document.querySelector('#sollModal button').focus();
+let settingsMode='bedarf',settingsSnapshot=null,planEditor=null,planEditorRequest=0;
+function editorWeekLabel(week){const end=shiftDateKey(week,'so');const fmt=s=>new Date(s+'T12:00:00Z').toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric',timeZone:'Europe/Berlin'});return fmt(week)+' – '+fmt(end);}
+function editorMessage(text,error=false){const el=document.getElementById('editorStatus');el.textContent=text;el.classList.toggle('editor-error',error);}
+function editorBusy(busy){if(planEditor)planEditor.busy=busy;document.querySelectorAll('#sollModal input,#sollModal textarea,#sollModal select,#sollModal button').forEach(el=>el.disabled=busy);}
+function editorValues(){
+ if(!planEditor)return null;
+ if(settingsMode==='hinweise')return {note:document.getElementById('editorNote').value};
+ const values={};for(const d of daysOfWeek)for(const period of ['tag','abend']){const id=(settingsMode==='bedarf'?'soll_':'res_')+d.key+'_'+period;values[id]=document.getElementById(id).value;}
+ return values;
 }
+function editorDirty(){return !!planEditor&&JSON.stringify(editorValues())!==planEditor.baseline;}
+function renderPlanEditor(data){
+ settingsSnapshot=structuredClone(data);const week=planEditor.week;
+ document.getElementById('sollTitle').textContent=({bedarf:'Bedarf',reservierungen:'Reservierungen',hinweise:'Hinweise für die Woche'})[settingsMode];
+ document.getElementById('editorWeek').value=week;document.getElementById('editorWeekLabel').textContent=editorWeekLabel(week);
+ document.getElementById('sollModalContent').innerHTML=settingsMode==='hinweise'?`<label class="note-editor-label" for="editorNote">Wochenhinweis bearbeiten</label><p class="hint">Gilt für die gesamte Woche. Zum Löschen den Text entfernen und speichern.</p><textarea id="editorNote" rows="10" maxlength="4000" placeholder="Informationen, Veranstaltungen oder besondere Aufgaben für diese Woche …">${escapeHtml(data.note||'')}</textarea>`:daysOfWeek.map(d=>`<section class="plain-card"><h3>${d.label}, ${new Date(shiftDateKey(week,d.key)+'T12:00:00Z').toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',timeZone:'Europe/Berlin'})}</h3>${['tag','abend'].map(period=>settingsMode==='bedarf'?`<label>Benötigte Personen · ${period==='tag'?'Tag':'Abend'}<input type="number" id="soll_${d.key}_${period}" value="${Number(data.soll[d.key]?.[period])||0}" min="0" max="50" step="1"></label>`:`<label>Reservierungen · ${period==='tag'?'Tag':'Abend'}<textarea id="res_${d.key}_${period}" rows="3" maxlength="300" placeholder="Uhrzeit · Personen · Hinweis">${escapeHtml((period==='tag'?data.resTag:data.resAbend)?.[d.key]||'')}</textarea></label>`).join('')}</section>`).join('');
+ planEditor.baseline=JSON.stringify(editorValues());document.getElementById('sollModalContent').scrollTop=0;
+ editorMessage('Woche auswählen und Einträge bearbeiten.');
+}
+function openSollModal(mode='bedarf'){
+ if(!cloudActor?.is_admin||cloudBusy)return;
+ if(planEditor){requestEditorAction(()=>{closeSollModal(true);openSollModal(mode);});return;}
+ const week=getWeekKey(currentWeekStart),data=db[week];if(!data)return;
+ settingsMode=['bedarf','reservierungen','hinweise'].includes(mode)?mode:'bedarf';
+ planEditor={week,actor:cloudActor.id,session:cloudSession?.user.id,busy:false,pending:null};planEditorRequest++;
+ renderPlanEditor(data);editorBusy(false);document.getElementById('editorConfirm').hidden=true;
+ document.getElementById('sollModal').classList.remove('hidden');document.getElementById('editorCloseTop').focus();
+}
+function toggleNoteEdit(){openSollModal('hinweise');}
+function closeSollModal(force=false){
+ if(force){planEditorRequest++;planEditor=null;settingsSnapshot=null;document.getElementById('editorConfirm').hidden=true;document.getElementById('sollModal').classList.add('hidden');return true;}
+ if(!planEditor)return true;
+ if(planEditor.busy)return false;
+ if(planEditor.pending){resolveEditorPrompt('cancel');return false;}
+ requestEditorAction(()=>{closeSollModal(true);document.getElementById(settingsMode==='hinweise'?'noteEditButton':'userBadgeName').focus();});return !planEditor;
+}
+function requestEditorAction(action){
+ if(!planEditor||planEditor.busy)return;
+ if(!editorDirty()){return action();}
+ planEditor.pending=action;document.querySelectorAll('#sollModal input,#sollModal textarea,#sollModal .editor-week-picker button,#sollModal .editor-actions button').forEach(el=>el.disabled=true);document.getElementById('editorConfirm').hidden=false;document.getElementById('editorPromptSave').focus();
+}
+async function resolveEditorPrompt(choice){
+ const context=planEditor;if(!context||context.busy)return;
+ const action=context.pending;
+ if(choice==='cancel'){editorBusy(false);context.pending=null;document.getElementById('editorConfirm').hidden=true;document.getElementById('editorSave').focus();return;}
+ if(choice==='save'&&!await savePlanEditor()){if(planEditor===context){context.pending=null;document.getElementById('editorConfirm').hidden=true;}return;}
+ if(planEditor!==context)return;
+ editorBusy(false);context.pending=null;document.getElementById('editorConfirm').hidden=true;if(action)await action();
+}
+function changeEditorWeek(direction){if(!planEditor)return;return selectEditorWeek(shiftDateKey(planEditor.week,direction>0?'so':'mo'),direction);}
+function selectEditorWeek(value,direction=0){
+ if(!planEditor||planEditor.busy)return;
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(value)||Number.isNaN(Date.parse(value+'T12:00:00Z'))){document.getElementById('editorWeek').value=planEditor.week;return;}
+ const date=new Date(value+'T12:00:00Z');date.setUTCDate(date.getUTCDate()-(date.getUTCDay()+6)%7+(direction?direction*7:0));
+ const week=date.toISOString().slice(0,10);document.getElementById('editorWeek').value=planEditor.week;if(week===planEditor.week)return;
+ return requestEditorAction(()=>loadEditorWeek(week));
+}
+async function loadEditorWeek(week){
+ const context=planEditor;if(!context)return;
+ const request=++planEditorRequest;editorBusy(true);editorMessage('Woche wird geladen …');
+ try{
+  const {data,error}=await cloudClient.from('week_settings').select('*').eq('week',week).maybeSingle();if(error)throw error;
+  if(planEditor!==context||request!==planEditorRequest||cloudActor?.id!==context.actor||cloudSession?.user.id!==context.session)return;
+  const snapshot=cloudBlankWeek();if(data)Object.assign(snapshot,{soll:data.requirements,resTag:data.reservations_day,resAbend:data.reservations_evening,note:data.note,noteRevision:data.note_revision,settingsRevision:data.settings_revision});
+  context.week=week;renderPlanEditor(snapshot);
+ }catch(error){if(planEditor===context)editorMessage('Woche konnte nicht geladen werden. '+cloudError(error),true);}
+ finally{if(planEditor===context)editorBusy(false);}
+}
+async function savePlanEditor(){
+ const context=planEditor;if(!context||context.busy||!cloudActor?.is_admin||cloudActor.id!==context.actor||cloudSession?.user.id!==context.session)return false;
+ const values=editorValues(),snapshot=structuredClone(settingsSnapshot),noteMode=settingsMode==='hinweise';
+ if(noteMode){if(values.note.length>4000){editorMessage('Der Wochenhinweis darf maximal 4000 Zeichen enthalten.',true);return false;}snapshot.note=values.note;}
+ else for(const d of daysOfWeek)for(const period of ['tag','abend']){
+  const id=(settingsMode==='bedarf'?'soll_':'res_')+d.key+'_'+period,value=values[id];
+  if(settingsMode==='bedarf'){
+   const number=Number(value);if(value.trim()===''||!Number.isInteger(number)||number<0||number>50){editorMessage('Personalbedarf muss eine ganze Zahl zwischen 0 und 50 sein.',true);document.getElementById(id).focus();return false;}snapshot.soll[d.key][period]=number;
+  }else{if(value.length>300){editorMessage('Reservierungen dürfen maximal 300 Zeichen pro Schicht enthalten.',true);document.getElementById(id).focus();return false;}(period==='tag'?snapshot.resTag:snapshot.resAbend)[d.key]=value;}
+ }
+ editorBusy(true);editorMessage('Wird gespeichert …');
+ try{
+  const saved=await cloudWrite(noteMode?'save_week_note':'save_week_settings',noteMode?{p_week:context.week,p_note:snapshot.note,p_revision:snapshot.noteRevision}:{p_week:context.week,p_requirements:snapshot.soll,p_day:snapshot.resTag,p_evening:snapshot.resAbend,p_revision:snapshot.settingsRevision});
+  if(planEditor!==context)return false;
+  if(!saved){editorMessage(document.getElementById('syncStatus').textContent+' Deine Eingaben bleiben erhalten. Mit „Neu laden“ kannst du den aktuellen Stand abrufen.',true);return false;}
+  if(noteMode)snapshot.noteRevision++;else snapshot.settingsRevision++;
+  settingsSnapshot=snapshot;context.baseline=JSON.stringify(values);
+  editorMessage('✓ Woche '+editorWeekLabel(context.week)+' gespeichert.');document.getElementById('sollModalContent').scrollTop=0;return true;
+ }catch(error){if(planEditor===context)editorMessage(cloudError(error)+' Deine Eingaben bleiben erhalten.',true);return false;}
+ finally{if(planEditor===context)editorBusy(false);}
+}
+function saveSollSettings(){return savePlanEditor();}
+function saveWeekNote(){return savePlanEditor();}
+function reloadEditorWeek(){if(planEditor)return requestEditorAction(()=>loadEditorWeek(planEditor.week));}
+document.addEventListener('input',event=>{if(planEditor&&!planEditor.busy&&event.target.closest?.('#sollModalContent'))editorMessage('Änderungen noch nicht gespeichert.');});
+window.addEventListener('beforeunload',event=>{if(editorDirty()){event.preventDefault();event.returnValue='';}});
 
 if(window.ResizeObserver)new ResizeObserver(entries=>document.documentElement.style.setProperty('--header-height',entries[0].target.getBoundingClientRect().height+'px')).observe(document.querySelector('.app-header'));
 
@@ -263,7 +348,7 @@ function renderCapacityWarning(){
  const total=cloudCapacity.reduce((n,a)=>n+a.missing,0);
  el.innerHTML=`<strong>⚠ Personal fehlt trotz abgelaufener Rückmeldefrist</strong><p>${cloudCapacity.length} Schichten unterbesetzt · ${total} Plätze offen</p><details ${open?'open':''}><summary>Betroffene Schichten anzeigen</summary>${cloudCapacity.map(a=>{const date=new Date(a.date+'T12:00:00Z').toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',timeZone:'Europe/Berlin'});return `<div class="capacity-row"><span>${escapeHtml(date)} · ${a.period==='tag'?'Tag':'Abend'} · ${a.filled}/${a.required} besetzt</span><button onclick="openCapacityWeek('${a.week}','${a.day}')">${a.missing} ${a.missing===1?'Platz offen':'Plätze offen'} →</button></div>`;}).join('')}</details>`;
 }
-async function openCapacityWeek(week,day){if(cloudBusy)return;closeWithdrawal();closeTransfer();closeSollModal();closeWeekNotices();focusDay=day;currentWeekStart=new Date(week+'T12:00:00');cloudLoadedWeek=null;cloudDeadline=null;cloudRule=null;loadWeekData();switchTab('cards');renderApp();await cloudSync();}
+async function openCapacityWeek(week,day){if(planEditor){requestEditorAction(()=>{closeSollModal(true);return openCapacityWeek(week,day);});return;}if(cloudBusy)return;closeWithdrawal();closeTransfer();closeSollModal();closeWeekNotices();focusDay=day;currentWeekStart=new Date(week+'T12:00:00');cloudLoadedWeek=null;cloudDeadline=null;cloudRule=null;loadWeekData();switchTab('cards');renderApp();await cloudSync();}
 
 
 async function navigateWeekAtDays(direction){

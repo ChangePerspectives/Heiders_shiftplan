@@ -93,3 +93,32 @@ input,select,textarea{font-size:16px}
 .special-task{font-size:13px;font-weight:600;color:#163e69;margin:6px 0;background:#eaf3ff;padding:6px 9px;border-radius:8px}
 
 .absence-line{font-size:13px;color:var(--muted);padding-top:10px;border-top:1px solid var(--line);margin:10px 0 0}
+/* Wocheneditor: Kopf und Aktionen bleiben auch auf kleinen Bildschirmen erreichbar. */
+.occupancy.is-complete{background:#edf7f0;color:#276648;border:1px solid #cce5d4;border-radius:12px;padding:5px 9px}
+#noteEditButton{background:var(--red);color:white;border-color:var(--red);font-weight:700;padding:10px 16px}
+#sollModal .plan-editor-panel{position:relative;display:flex;flex-direction:column;max-width:640px;width:100%;height:min(820px,calc(100dvh - 32px));max-height:calc(100dvh - 32px);overflow:hidden;padding:18px;box-sizing:border-box}
+.plan-editor-panel .modal-title{flex-shrink:0;margin-bottom:10px}
+.plan-editor-panel .modal-title h2{font-size:1.25rem;margin:0}
+.editor-close{font-size:24px;font-weight:900;min-width:44px;min-height:44px}
+.editor-week-picker{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-bottom:8px}
+.editor-week-picker label{display:flex;flex:1;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.editor-week-picker input{width:100%;box-sizing:border-box;min-height:42px;font:inherit;font-size:16px}
+.editor-week-picker button{font-size:26px;min-width:44px;min-height:44px}
+#editorWeekLabel{font-size:14px;flex-shrink:0}
+#editorStatus{margin:8px 0;font-size:13px;color:#276648;flex-shrink:0;overflow-wrap:anywhere}
+#editorStatus.editor-error{color:#b91c1c}
+.editor-scroll{overflow-y:auto;overscroll-behavior:contain;min-height:0;flex:1;padding:4px 3px 10px}
+.editor-scroll label{display:block;font-size:14px}
+.editor-scroll input,.editor-scroll textarea{width:100%;box-sizing:border-box;margin:5px 0 12px;font-size:16px}
+.editor-scroll textarea{resize:vertical;line-height:1.5}
+#editorNote{min-height:250px;padding:14px}
+.note-editor-label{font-weight:700}
+.editor-actions{display:flex;gap:8px;justify-content:flex-end;flex-shrink:0;padding-top:12px;border-top:1px solid var(--line);background:white}
+.editor-actions button{min-height:44px;font-weight:700}
+.editor-actions .editor-reload{margin-right:auto;font-size:12px}
+.editor-confirm{position:absolute;inset:0;z-index:3;background:white;display:flex;flex-direction:column;justify-content:center;padding:24px;gap:12px;overflow-y:auto}
+.editor-confirm[hidden]{display:none}
+.editor-confirm h3,.editor-confirm p{margin:0 0 8px}
+.editor-confirm button{min-height:48px}
+@media(max-width:480px){#sollModal{padding:8px}#sollModal .plan-editor-panel{height:calc(100dvh - 16px);max-height:calc(100dvh - 16px);padding:12px}.editor-actions{gap:6px}.editor-actions button{padding:10px;font-size:13px}}
+@media(max-height:480px){#sollModal .plan-editor-panel{padding:8px 12px}.plan-editor-panel .modal-title{margin-bottom:2px}.editor-week-picker{margin-bottom:2px}.editor-week-picker label{flex-direction:row;align-items:center}.editor-week-picker input{width:auto;flex:1}#editorWeekLabel{display:none}#editorStatus{margin:3px 0}.editor-actions{padding-top:5px}#editorNote{min-height:140px}}

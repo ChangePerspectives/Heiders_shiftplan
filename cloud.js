@@ -31,7 +31,7 @@ function cloudClear() {
   document.getElementById('adminUserSelectWrapper').classList.add('hidden');
   document.getElementById('userBadgeName').textContent='Abgemeldet';document.getElementById('accountMenu').open=false;document.getElementById('accountDetails').textContent='Nicht angemeldet';
   document.getElementById('loginModal').classList.remove('hidden');
-  closeSollModal(); document.getElementById('noteEditBox').classList.add('hidden');
+  closeSollModal(true); document.getElementById('noteEditBox').classList.add('hidden');
 }
 async function cloudSync() {
   if (!cloudSession || cloudBusy) return;
@@ -174,6 +174,7 @@ function getWeekKey(date) {
 function loadWeekData() {const week=getWeekKey(currentWeekStart);db[week] ??= cloudBlankWeek();}
 function saveDB() {throw new Error('Lokales Speichern ist in der gemeinsamen App deaktiviert.');}
 async function changeWeek(direction) {
+  if(planEditor){requestEditorAction(()=>{closeSollModal(true);return changeWeek(direction);});return;}
   if(cloudBusy) return;
   closeSollModal();closeWithdrawal();document.getElementById('noteEditBox').classList.add('hidden');
   currentWeekStart.setDate(currentWeekStart.getDate()+direction*7);
@@ -312,6 +313,7 @@ function renderDeadline() {
   if(el.querySelector('details'))el.querySelector('details').open=detailsOpen;
 }
 async function openPlanningWeek(week) {
+  if(planEditor){requestEditorAction(()=>{closeSollModal(true);return openPlanningWeek(week);});return;}
   if(cloudBusy)return;closeWithdrawal();closeSollModal();document.getElementById('noteEditBox').classList.add('hidden');
   currentWeekStart=new Date(week+'T12:00:00');cloudLoadedWeek=null;cloudDeadline=null;cloudRule=null;loadWeekData();switchTab('myShifts');renderApp();await cloudSync();
 }
