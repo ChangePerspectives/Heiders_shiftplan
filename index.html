@@ -32,9 +32,8 @@
 
     .badge-se { background-color: #E6F4EA; color: #137333; border: 1px solid #CEEAD6; }
     .badge-kü { background-color: #FEF7E0; color: #B06000; border: 1px solid #FDE293; }
-    .badge-s { background-color: #E8F0FE; color: #1A73E8; border: 1px solid #AECBFA; }
 
-    /* Sticky Tabelle für Wochenübersicht */
+    /* Sticky Tabelle für Wochenübersicht - Mit klarer Zeilentrennung */
     table.sticky-table {
       border-collapse: separate !important;
       border-spacing: 0 !important;
@@ -57,13 +56,22 @@
 </head>
 <body class="min-h-screen pb-20">
 
-  <!-- Header: Mit 1:1 Original-Logo auf hellem Kontrastfeld -->
+  <!-- Header: Mit 1:1 Original-Logo auf hellem Trägerfeld -->
   <header class="app-header shadow-md p-2 border-b border-[#C5A059]/40">
     <div class="max-w-md mx-auto flex justify-between items-center gap-2">
       
-      <!-- Original PNG Logo 1:1 unverändert -->
-      <div class="bg-white/95 px-3 py-1.5 rounded-xl shadow-md border border-[#C5A059]/60 flex items-center justify-center">
-        <img id="appLogo" class="h-8 sm:h-9 w-auto object-contain" alt="Heider's Weine & Mehr Logo" />
+      <!-- Original Logo 1:1 unverändert -->
+      <div class="bg-white px-2.5 py-1 rounded-xl shadow-md border border-[#C5A059]/60 flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 120" class="h-8 sm:h-9 w-auto">
+          <text x="10" y="70" font-family="'Segoe Script', 'Brush Script MT', cursive, sans-serif" font-size="62" font-weight="bold" fill="#5A5553">Heider</text>
+          <text x="245" y="65" font-family="'Segoe Script', 'Brush Script MT', cursive, sans-serif" font-size="70" font-weight="bold" fill="#8C1D40">'s</text>
+          <path d="M 245 75 Q 280 100 315 75" fill="none" stroke="#2B2321" stroke-width="3.5"/>
+          <line x1="280" y1="92" x2="280" y2="108" stroke="#2B2321" stroke-width="3.5"/>
+          <line x1="265" y1="108" x2="295" y2="108" stroke="#2B2321" stroke-width="3.5"/>
+          <text x="120" y="110" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="bold" letter-spacing="4" fill="#8C1D40">WEINE</text>
+          <text x="235" y="110" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="bold" fill="#5A5553">&amp;</text>
+          <text x="265" y="110" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="bold" letter-spacing="4" fill="#8C1D40">MEHR</text>
+        </svg>
       </div>
       
       <div class="flex items-center gap-1.5">
@@ -108,7 +116,7 @@
       <button onclick="changeWeek(1)" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-xl font-bold text-xs text-[#8C1D40]">Vor ❯</button>
     </div>
 
-    <!-- Modus-Umschalter: 3 Tabs (Karten, Gesamtwoche, Meine Schichten) -->
+    <!-- Modus-Umschalter: 3 Tabs -->
     <div class="grid grid-cols-3 rounded-xl bg-stone-200 p-1 text-[11px] font-bold gap-0.5">
       <button id="tabCardsBtn" onclick="switchTab('cards')" class="py-2 rounded-lg btn-active text-center">📋 Karten</button>
       <button id="tabWeekBtn" onclick="switchTab('week')" class="py-2 rounded-lg btn-inactive text-center">📊 Gesamtplan</button>
@@ -137,7 +145,7 @@
       </div>
     </div>
 
-    <!-- TAB 1: TAGES-KARTEN (GASTRO-APP VIEW) -->
+    <!-- TAB 1: TAGES-KARTEN -->
     <div id="tabCards" class="space-y-3">
       <div id="adminControls" class="bg-stone-100 border border-stone-300 rounded-2xl p-3 text-xs hidden flex justify-between items-center">
         <span class="font-bold text-stone-800">👑 Admin-Steuerung</span>
@@ -147,7 +155,7 @@
       <div id="dailyCardsContainer" class="space-y-3"></div>
     </div>
 
-    <!-- TAB 2: NORMALE GESAMTWENÜBERSICHT (OPTIMIERTE MATRIX TABELLE) -->
+    <!-- TAB 2: GESAMTWENÜBERSICHT -->
     <div id="tabWeek" class="hidden space-y-3">
       <div class="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden p-2">
         <div class="text-xs font-bold text-[#8C1D40] mb-2 px-1">📊 Auslastung & Gesamtplan aller Mitarbeiter</div>
@@ -178,7 +186,7 @@
 
   </div>
 
-  <!-- Schwebender Button: Nach oben scrollen -->
+  <!-- Schwebender Top-Button -->
   <button id="scrollToTopBtn" onclick="scrollToTop()" class="fixed bottom-4 right-4 bg-[#8C1D40] text-white p-3 rounded-full shadow-2xl border border-[#C5A059]/50 flex items-center justify-center transition-all opacity-90 hover:opacity-100 z-40">
     <span class="font-bold text-xs flex items-center gap-1">▲ Top</span>
   </button>
@@ -247,15 +255,6 @@
     ];
 
     function init() {
-      // 1:1 Einbettung des Original Heider's Logo PNG
-      const logoImg = document.getElementById('appLogo');
-      if (logoImg) {
-        logoImg.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAYAAAD0eNT6AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAGstJREFUeNrs3X28ZVP9///XmTMmRInp0k2iUoo0KZJkSqTRlSiaVEom0s1Nl3sS3fTToqJLpUSSKVGSpkS5d3MzkSYpIkVJkUpS5MxzfX981vvf5/R233fOfu191v3e3+v1eDwej2vvvfc567O/e6/X2nuttdba6wcXERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERE";
-        
-        // Fügt das Data URL Bild dynamically ein
-        logoImg.src = data_url;
-      }
-
       if (!currentUser) {
         showLoginModal();
       } else {
