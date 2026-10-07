@@ -1,4 +1,5 @@
 'use strict';
+let overviewFocusDay='mo';
 let focusDay='do',activeTab='cards',transferContext=null,lastUndo=null;
 const shortDay={mo:'Mo',di:'Di',mi:'Mi',do:'Do',fr:'Fr',sa:'Sa',so:'So'};
 function serverNow(){return Date.now()+cloudServerOffset;}
@@ -47,24 +48,33 @@ function renderDayViews(){
  const days=visibleDays();if(!days.some(d=>d.key===focusDay))focusDay=days[0]?.key||'di';
  const picker=days.map(d=>`<button data-day="${d.key}" class="${d.key===focusDay?'active':''}" aria-pressed="${d.key===focusDay}" onclick="selectFocusDay('${d.key}')">${shortDay[d.key]}<span>${getDateForDay(daysOfWeek.indexOf(d)).getDate()}</span></button>`).join('');
  const strip=`<button class="week-step" onclick="navigateWeekAtDays(-1)" aria-label="Vorherige Woche">‹</button><div class="day-track" aria-label="Tage dieser Woche">${picker}</div><button class="week-step" onclick="navigateWeekAtDays(1)" aria-label="Nächste Woche">›</button>`;
- document.getElementById('dayPickerCards').innerHTML=strip;document.getElementById('dayPickerTeam').innerHTML=strip;
+ document.getElementById('dayPickerCards').innerHTML=strip;
+ const overviewPicker=daysOfWeek.map(d=>`<button data-day="${d.key}" class="${d.key===overviewFocusDay?'active':''}" aria-pressed="${d.key===overviewFocusDay}" onclick="selectOverviewDay('${d.key}')">${shortDay[d.key]}<span>${getDateForDay(daysOfWeek.indexOf(d)).getDate()}</span></button>`).join('');
+ document.getElementById('dayPickerTeam').innerHTML=`<button class="week-step" onclick="navigateWeekAtDays(-1)" aria-label="Vorherige Woche">‹</button><div class="day-track" aria-label="Zu einem Tag in dieser Woche springen">${overviewPicker}</div><button class="week-step" onclick="navigateWeekAtDays(1)" aria-label="Nächste Woche">›</button>`;
  for(const id of ['dayPickerCards','dayPickerTeam']){const track=document.getElementById(id).querySelector('.day-track'),button=track?.querySelector('[aria-pressed="true"]');if(button)track.scrollLeft=Math.max(0,button.offsetLeft-track.offsetLeft-track.clientWidth/2+button.offsetWidth/2);}
  document.getElementById('dailyCardsContainer').innerHTML=dayMarkup(true);
- document.getElementById('teamDayContainer').innerHTML=dayMarkup(false);
+ document.getElementById('teamDayContainer').innerHTML=daysOfWeek.map(d=>`<section class="overview-day" id="overview-${d.key}" aria-label="${escapeHtml(d.label)}">${dayMarkup(false,d.key)}</section>`).join('');
 }
-function dayMarkup(edit){
- const data=db[getWeekKey(currentWeekStart)],day=focusDay,index=daysOfWeek.findIndex(d=>d.key===day);
+function selectOverviewDay(day){
+ if(!daysOfWeek.some(d=>d.key===day))return;
+ overviewFocusDay=day;
+ document.querySelectorAll('#dayPickerTeam [data-day]').forEach(button=>{const selected=button.getAttribute('data-day')===day;button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));});
+ document.getElementById('overview-'+day)?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function dayMarkup(edit,selectedDay=focusDay){
+ const data=db[getWeekKey(currentWeekStart)],day=selectedDay,index=daysOfWeek.findIndex(d=>d.key===day);
  let html=`<h2 class="day-title">${daysOfWeek[index].label}, ${getDateForDay(index).toLocaleDateString('de-DE',{day:'numeric',month:'long'})}</h2>`;
+ if(!edit)html+='<div class="overview-shifts">';
  for(const period of ['tag','abend']){
  const staff=team.filter(p=>isScheduled(data.shifts[p.name]?.[day]?.[period]));
  const absences=team.filter(p=>['u','k','f'].includes(data.shifts[p.name]?.[day]?.[period]));
  const needed=data.soll[day]?.[period]||0,open=Math.max(0,needed-staff.length),excess=Math.max(0,staff.length-needed),res=(period==='tag'?data.resTag:data.resAbend)?.[day];
- html+=`<article class="shift-card"><div class="shift-heading"><h3>${period==='tag'?'☀ Tagschicht':'☾ Abendschicht'}</h3><span class="${open||excess?'open-slot':needed>0?'occupancy is-complete':'occupancy'}">${excess?excess+' zu viel · '+staff.length+'/'+needed+' besetzt':open?open+' '+(open===1?'Platz frei':'Plätze frei'):(needed>0?'✓ ':'')+staff.length+' von '+needed+' besetzt'}</span></div><p class="hint">${period==='tag'?'Ab 10:30 Uhr':'Ab 15:00 Uhr'}</p><div class="reservation ${res?.trim()?'has-reservation':''}"><strong>${res?.trim()?'📌 ':''}Reservierungen · ${period==='tag'?'Tag':'Abend'}</strong>${res?escapeHtml(res):'Keine Reservierungen hinterlegt.'}</div><ul class="roster">${staff.map(p=>{
+ html+=`<article class="shift-card"><div class="shift-heading"><h3>${period==='tag'?'☀ Tagschicht':'☾ Abendschicht'}</h3><span class="${open||excess?'open-slot':needed>0?'occupancy is-complete':'occupancy'}">${excess?excess+' zu viel · '+staff.length+'/'+needed+' besetzt':open?open+' '+(open===1?'Platz frei':'Plätze frei'):(!needed&&!staff.length?'Kein Bedarf':(needed>0?'✓ ':'')+staff.length+' von '+needed+' besetzt')}</span></div><p class="hint">${period==='tag'?'Ab 10:30 Uhr':'Ab 15:00 Uhr'}</p><div class="reservation ${res?.trim()?'has-reservation':''}"><strong>${res?.trim()?'📌 ':''}Reservierungen · ${period==='tag'?'Tag':'Abend'}</strong>${res?escapeHtml(res):'Keine Reservierungen hinterlegt.'}</div><ul class="roster">${staff.map(p=>{
  const transfer=pendingFor(p.id,day,period);
- return `<li><div class="person-line"><strong>${escapeHtml(p.name)}</strong><span>${escapeHtml(shiftRoleLabel(data.shifts[p.name][day][period]))}</span></div>${shiftTimeHint(p.name,day,period)}${data.shifts[p.name][day][period]==='offen'&&!transfer&&!isShiftLocked(getWeekKey(currentWeekStart),day,period)&&(cloudActor?.is_admin||cloudActor?.id===p.id)&&(!edit||p.name!==currentUser)?roleConfirmationButtons(p.id,day,period):''}${transfer?`<div class="transfer-status">Übernahme bei ${escapeHtml(personName(transfer.taker_id))} angefragt · Bestätigung offen</div>`:''}</li>`;
+ return `<li><div class="person-line"><strong>${escapeHtml(p.name)}</strong><span>${escapeHtml(shiftRoleLabel(data.shifts[p.name][day][period]))}</span></div>${shiftTimeHint(p.name,day,period)}${data.shifts[p.name][day][period]==='offen'&&!transfer&&!isShiftLocked(getWeekKey(currentWeekStart),day,period)&&(cloudActor?.is_admin||cloudActor?.id===p.id)&&edit&&p.name!==currentUser?roleConfirmationButtons(p.id,day,period):''}${transfer?`<div class="transfer-status">Übernahme bei ${escapeHtml(personName(transfer.taker_id))} angefragt · Bestätigung offen</div>`:''}</li>`;
  }).join('')}</ul>${!staff.length?'<p class="hint">Noch niemand eingetragen.</p>':''}${absences.length?`<p class="absence-line">Abwesend / frei: ${absences.map(p=>escapeHtml(p.name)+' ('+escapeHtml(shiftRoleLabel(data.shifts[p.name][day][period]))+')').join(', ')}</p>`:''}${edit?renderClaimAction(day,period):''}</article>`;
  }
- return html;
+ return html+(!edit?'</div>':'');
 }
 function renderClaimAction(day,period){
  const person=team.find(p=>p.name===currentUser),data=db[getWeekKey(currentWeekStart)],value=data?.shifts[currentUser]?.[day]?.[period];if(!person)return '';
@@ -373,6 +383,7 @@ async function openCapacityWeek(week,day){if(planEditor){requestEditorAction(()=
 
 async function navigateWeekAtDays(direction){
  if(cloudBusy)return;const y=window.scrollY;await changeWeek(direction);
+ if(activeTab==='week'){renderDayViews();selectOverviewDay(direction>0?'mo':'so');return;}
  const days=visibleDays();focusDay=(direction>0?days[0]:days.at(-1))?.key||'di';renderDayViews();
  window.scrollTo({top:y,behavior:'instant'});
 }

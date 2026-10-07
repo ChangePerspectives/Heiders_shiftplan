@@ -16,7 +16,7 @@
 
  <details id="weekNotes" class="notice week-notes"><summary id="weekNoteSummary"><span id="weekNotesButton">Hinweise für die Woche</span><span class="notes-chevron" aria-hidden="true">⌄</span></summary><p id="noteDisplay"></p><button id="noteEditButton" onclick="toggleNoteEdit()">Bearbeiten</button><div id="noteEditBox" class="hidden"><textarea id="noteInput" rows="2" maxlength="4000" aria-label="Wochenhinweis"></textarea><button class="primary" onclick="saveWeekNote()">Speichern</button></div></details>
  <div id="tabCards"><div id="dayPickerCards" class="day-picker" aria-label="Tag auswählen"></div><div id="dailyCardsContainer"></div></div>
- <div id="tabWeek" class="hidden"><div id="dayPickerTeam" class="day-picker" aria-label="Tag der Gesamtübersicht auswählen"></div><div id="teamDayContainer"></div><div id="weekTableScroll" hidden><table><thead><tr id="weekTableHeader"></tr><tr id="weekReservationsRow"></tr></thead><tbody id="weekTableBody"></tbody></table></div></div>
+ <div id="tabWeek" class="hidden"><div class="overview-intro"><strong>Gesamte Woche</strong><p class="hint">Durch die Woche scrollen oder direkt zu einem Tag springen.</p></div><div id="dayPickerTeam" class="day-picker" aria-label="Zu einem Tag im Gesamtplan springen"></div><div id="teamDayContainer"></div><div id="weekTableScroll" hidden><table><thead><tr id="weekTableHeader"></tr><tr id="weekReservationsRow"></tr></thead><tbody id="weekTableBody"></tbody></table></div></div>
  <div id="tabMyShifts" class="hidden"><p class="hint">Plan für <strong id="currentUserDisplay"></strong></p><div id="myShiftsList"></div></div>
  <div id="tabSpringer" class="hidden"><div id="springerContainer"></div></div>
 

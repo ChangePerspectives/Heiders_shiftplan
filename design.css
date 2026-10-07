@@ -143,3 +143,17 @@ input,select,textarea{font-size:16px}
 @media(hover:hover){.inbox-top-button:hover{background:var(--red-dark);box-shadow:0 5px 14px #41404033}}
 @media(max-width:380px){.compact-week-text{gap:5px}.week-nav .compact-week-text strong,#editorWeekLabel{font-size:13px}.week-nav>button,.editor-week-picker>button{padding:8px;min-width:40px}.compact-week-text small{font-size:11px}}
 @media(max-height:480px){.editor-week-picker .compact-week-select{display:block}.editor-week-picker .week-calendar-input{width:100%}#editorWeekLabel{display:inline}.editor-week-picker .compact-week-text{padding:5px;min-height:40px}}
+/* Gesamtplan: die gesamte Woche zum Durchscrollen. */
+#teamDayContainer{display:block}
+.overview-intro{margin:12px 0 6px}
+.overview-intro>strong{font-size:18px}
+.overview-intro p{margin:3px 0}
+.overview-day{margin:0 0 24px;scroll-margin-top:calc(var(--header-height) + 92px)}
+.overview-day>.day-title{font-size:18px;margin:0 0 12px;padding:12px 2px 8px;border-bottom:1px solid var(--line)}
+.overview-shifts{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-items:start}
+.overview-shifts .shift-card{padding:15px;margin:0}
+.overview-shifts .shift-heading{gap:8px;flex-wrap:wrap}
+.overview-shifts .shift-heading h3{font-size:15px}
+.overview-shifts .roster{margin-bottom:0}
+.overview-shifts .reservation:not(.has-reservation){display:none}
+@media(min-width:700px){.overview-shifts{grid-template-columns:repeat(2,minmax(0,1fr))}.overview-day{scroll-margin-top:calc(var(--header-height) + var(--nav-height) + 95px)}.overview-day>.day-title{font-size:20px}.overview-shifts .shift-card{padding:18px}}
