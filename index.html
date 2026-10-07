@@ -12,6 +12,19 @@
     .custom-scrollbar::-webkit-scrollbar { height: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: #F5EFEE; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #C5A059; border-radius: 3px; }
+    
+    /* Fixierte Mitarbeiter-Spalte beim horizontalen Scrollen */
+    .sticky-col {
+      position: sticky;
+      left: 0;
+      background-color: #FFFFFF;
+      z-index: 10;
+      box-shadow: 2px 0 5px -2px rgba(0, 0, 0, 0.15);
+    }
+    th.sticky-col {
+      background-color: #F5EFEE;
+      z-index: 20;
+    }
   </style>
 </head>
 <body class="min-h-screen pb-12">
@@ -23,12 +36,36 @@
         <h1 class="font-bold text-base sm:text-lg text-[#C5A059]">🍷 Heider's Weine & mehr</h1>
         <p class="text-[11px] text-stone-200">Dienstplan-System</p>
       </div>
-      <div>
-        <select id="userSelect" onchange="changeUser(this.value)" class="bg-[#521422] text-white text-xs font-bold py-1.5 px-2 rounded border border-[#C5A059]/50 focus:outline-none">
-        </select>
+      <div class="flex items-center gap-2">
+        <!-- Admin-Only Dropdown (Nur Pia & Nelly) -->
+        <div id="adminUserSelectWrapper" class="hidden">
+          <select id="userSelect" onchange="changeUser(this.value)" class="bg-[#521422] text-white text-xs font-bold py-1.5 px-2 rounded border border-[#C5A059]/50 focus:outline-none">
+          </select>
+        </div>
+        <!-- Personal Badge für Mitarbeiter -->
+        <div id="userBadgeWrapper" class="text-xs bg-[#521422] text-[#C5A059] font-bold px-2.5 py-1 rounded border border-[#C5A059]/40 flex items-center gap-1">
+          <span id="userBadgeName">Nelly</span>
+          <button onclick="resetUserChoice()" class="text-stone-300 hover:text-white ml-1 text-[10px]" title="Benutzer wechseln">⚙️</button>
+        </div>
       </div>
     </div>
   </header>
+
+  <!-- Login Modal bei Erstaufruf -->
+  <div id="loginModal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl text-center space-y-4">
+      <div class="text-3xl">🍷</div>
+      <h2 class="font-bold text-lg text-[#6B1D2F]">Willkommen im Heider's Dienstplan</h2>
+      <p class="text-xs text-stone-600">Bitte wähle deinen Namen aus. Deine Auswahl wird für dieses Smartphone gespeichert.</p>
+      
+      <select id="initialUserSelect" class="w-full p-2.5 border border-stone-300 rounded-xl text-sm font-bold bg-stone-50 focus:outline-none focus:ring-2 focus:ring-[#6B1D2F]">
+      </select>
+
+      <button onclick="confirmUserChoice()" class="w-full py-2.5 bg-[#6B1D2F] text-white rounded-xl font-bold shadow-lg hover:bg-[#521422]">
+        Anmelden & Speichern
+      </button>
+    </div>
+  </div>
 
   <!-- Navigation & Tabs -->
   <div class="max-w-4xl mx-auto px-3 mt-3">
@@ -59,13 +96,28 @@
     </div>
   </div>
 
-  <!-- Main Content -->
+  <!-- Wochen-Notizfeld -->
+  <div class="max-w-4xl mx-auto px-3 mt-3">
+    <div class="bg-amber-50/80 border border-amber-200 rounded-xl p-3 shadow-sm text-xs space-y-1.5">
+      <div class="flex justify-between items-center font-bold text-amber-900">
+        <span class="flex items-center gap-1.5">📝 Wochen-Notizen & Hinweise</span>
+        <button id="editNoteBtn" onclick="toggleNoteEdit()" class="text-[10px] text-amber-800 underline">Bearbeiten</button>
+      </div>
+      <div id="noteDisplay" class="text-amber-950 italic">Keine Notizen für diese Woche.</div>
+      <div id="noteEditBox" class="hidden space-y-2">
+        <textarea id="noteInput" rows="2" class="w-full p-2 border border-amber-300 rounded-lg text-xs focus:outline-none" placeholder="Echtzeit-Notiz eintragen..."></textarea>
+        <button onclick="saveWeekNote()" class="px-3 py-1 bg-[#6B1D2F] text-white rounded font-bold text-[11px]">Speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Container -->
   <main class="max-w-4xl mx-auto px-3 mt-3">
     
     <!-- TAB 1: MEINE SCHICHTEN -->
     <div id="tabMyShifts" class="space-y-3">
       <div class="bg-white p-3 rounded-xl border border-stone-200 shadow-sm flex justify-between items-center">
-        <span class="font-bold text-xs sm:text-sm text-[#6B1D2F]">Angemeldet: <span id="currentUserDisplay" class="underline">Nelly</span></span>
+        <span class="font-bold text-xs sm:text-sm text-[#6B1D2F]">Eingeloggt als: <span id="currentUserDisplay" class="underline">Nelly</span></span>
         <button onclick="toggleSpecialDays()" id="specialDaysBtn" class="px-2.5 py-1 bg-stone-200 text-stone-700 rounded text-xs font-bold">
           Mo/So anzeigen
         </button>
@@ -77,7 +129,7 @@
     <!-- TAB 2: GESAMTPLAN -->
     <div id="tabFullPlan" class="hidden space-y-3">
       <div id="adminControls" class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs hidden">
-        <span class="font-bold block text-amber-900 mb-1">👑 Admin-Steuerung (Nelly)</span>
+        <span class="font-bold block text-amber-900 mb-1">👑 Inhaber- & Admin-Steuerung (Nelly & Pia)</span>
         <button onclick="openSollModal()" class="px-3 py-1.5 bg-[#6B1D2F] text-white rounded font-bold shadow">⚙️ Soll-Personal & Events festlegen</button>
       </div>
 
@@ -88,10 +140,10 @@
         </div>
         
         <div class="overflow-x-auto custom-scrollbar">
-          <table class="w-full text-left text-xs border-collapse min-w-[650px]">
+          <table class="w-full text-left text-xs border-collapse min-w-[720px]">
             <thead>
               <tr class="bg-[#F5EFEE] text-[#6B1D2F] font-bold border-b border-stone-200" id="tableHeaderRow">
-                <th class="p-2 w-28 border-r border-stone-200">Mitarbeiter</th>
+                <th class="p-2 w-32 sticky-col border-r border-stone-200">Mitarbeiter</th>
               </tr>
             </thead>
             <tbody id="fullPlanTableBody" class="divide-y divide-stone-100">
@@ -101,10 +153,10 @@
       </div>
 
       <div class="bg-white p-2.5 rounded-xl border border-stone-200 text-[11px] flex flex-wrap gap-3 text-stone-600">
-        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block"></span> Service/Theke (x)</span>
-        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-600 inline-block"></span> Küche (Kü)</span>
+        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block"></span> Service/Theke (se/th)</span>
+        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-600 inline-block"></span> Küche (kü)</span>
         <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block"></span> Springer (S)</span>
-        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-stone-400 inline-block"></span> Nicht da (-)</span>
+        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-100 border border-red-300 inline-block"></span> Rot = Fehlbedarf</span>
       </div>
     </div>
 
@@ -127,7 +179,7 @@
 
   <script>
     const team = [
-      { name: 'Pia', role: 'Inhaberin / Küche', isAdmin: false },
+      { name: 'Pia', role: 'Inhaberin / Küche', isAdmin: true },
       { name: 'Nelly', role: 'Admin & Service/Küche', isAdmin: true },
       { name: 'Max', role: 'Service & Theke', isAdmin: false },
       { name: 'Patricia', role: 'Service & Küche', isAdmin: false },
@@ -141,17 +193,116 @@
       { name: 'Ralf', role: 'Service & Theke', isAdmin: false }
     ];
 
-    let currentUser = 'Nelly';
+    let currentUser = localStorage.getItem('heiders_user') || null;
     let currentWeekStart = new Date(2026, 9, 5); // Mo 05.10.2026
     let showSpecialDays = false;
     let activeTab = 'myShifts';
 
+    // Alle 8 Wochen aus der Vorlage "Dienstplan-Vorlage-Heiders_3.xlsx"
+    const seedDB = {
+      "2026-10-05": {
+        "events": { "do": "Lesung - 45 Leute am Abend" },
+        "soll": { "di": {"tag": 2, "abend": 3}, "mi": {"tag": 2, "abend": 3}, "do": {"tag": 2, "abend": 2}, "fr": {"tag": 2, "abend": 3}, "sa": {"tag": 2, "abend": 3} },
+        "note": "Nadja: 06.10. hätte kommen sollen, stand im Plan ist nicht gekommen · Valeria kann auch küche machen",
+        "shifts": {
+          "Max": { "di": {"tag": "-", "abend": "se"}, "mi": {"tag": "-", "abend": "th"}, "fr": {"tag": "-", "abend": "se"}, "sa": {"tag": "-", "abend": "u"} },
+          "Patricia": { "di": {"tag": "se", "abend": "-"}, "mi": {"tag": "th", "abend": "-"}, "do": {"tag": "kü", "abend": "-"}, "fr": {"tag": "kü", "abend": "-"} },
+          "Tina": { "do": {"abend": "th"}, "sa": {"abend": "se 15"} },
+          "Valeria": { "do": {"abend": "kü"}, "sa": {"abend": "th"} },
+          "Esther": { "mi": {"abend": "kü"}, "do": {"abend": "se"}, "fr": {"abend": "th"} },
+          "Pia": { "di": {"tag": "kü", "abend": "kü"}, "mi": {"tag": "kü", "abend": "se"}, "do": {"tag": "th", "abend": "se"}, "fr": {"tag": "se", "abend": "kü"}, "sa": {"tag": "kü", "abend": "kü"} }
+        }
+      },
+      "2026-10-12": {
+        "events": { "sa": "34 Leute Geschlossene & 10 separat" },
+        "soll": { "di": {"tag": 2, "abend": 3}, "mi": {"tag": 2, "abend": 2}, "do": {"tag": 2, "abend": 2}, "fr": {"tag": 2, "abend": 3}, "sa": {"tag": 2, "abend": 3} },
+        "note": "Di Abend: Nadja ab 17h · Fr Tag: Patricia 11-15h",
+        "shifts": {
+          "Max": { "di": {"abend": "th"}, "fr": {"abend": "th"}, "sa": {"abend": "th"} },
+          "Patricia": { "di": {"tag": "kü"}, "mi": {"tag": "kü"}, "do": {"tag": "th"}, "fr": {"tag": "Kü 11–15"} },
+          "Martina": { "mi": {"tag": "u"}, "do": {"tag": "u"}, "fr": {"tag": "u"} },
+          "Tina": { "sa": {"abend": "th"} },
+          "Nadja": { "di": {"abend": "se (ab 17h)"} },
+          "Valeria": { "sa": {"abend": "se"} },
+          "Pia": { "di": {"tag": "x", "abend": "kü"}, "mi": {"tag": "kü", "abend": "x"}, "do": {"tag": "x", "abend": "x"}, "fr": {"tag": "x", "abend": "kü"}, "sa": {"tag": "kü", "abend": "kü"} }
+        }
+      },
+      "2026-10-19": {
+        "events": {},
+        "soll": { "di": {"tag": 2, "abend": 3}, "mi": {"tag": 2, "abend": 3}, "do": {"tag": 2, "abend": 2}, "fr": {"tag": 2, "abend": 3}, "sa": {"tag": 2, "abend": 3} },
+        "note": "Fr Tag: Patricia 11-15h · Sa Abend: Tina ab 15h",
+        "shifts": {
+          "Max": { "di": {"abend": "th"}, "mi": {"abend": "th"}, "fr": {"tag": "u", "abend": "se"}, "sa": {"tag": "u", "abend": "u"} },
+          "Patricia": { "mi": {"tag": "th"}, "fr": {"tag": "Kü 11–15"} },
+          "Martina": { "di": {"tag": "kü"}, "do": {"tag": "kü"} },
+          "Tina": { "sa": {"abend": "se 15"} },
+          "Pia": { "di": {"tag": "x", "abend": "kü"}, "mi": {"tag": "kü", "abend": "x"}, "do": {"tag": "x", "abend": "x"}, "fr": {"tag": "x", "abend": "kü"}, "sa": {"tag": "kü", "abend": "kü"} }
+        }
+      },
+      "2026-10-26": {
+        "events": {},
+        "soll": { "di": {"tag": 2, "abend": 3}, "mi": {"tag": 2, "abend": 3}, "do": {"tag": 2, "abend": 2}, "fr": {"tag": 2, "abend": 3}, "sa": {"tag": 1, "abend": 3} },
+        "note": "Sa Abend: Tina 17-23h",
+        "shifts": {
+          "Max": { "di": {"abend": "se"}, "mi": {"abend": "se"}, "fr": {"abend": "se"}, "sa": {"tag": "u"} },
+          "Patricia": { "mi": {"tag": "se"}, "do": {"tag": "se"}, "fr": {"tag": "se"} },
+          "Martina": { "mo": {"tag": "u", "abend": "u"}, "di": {"tag": "u", "abend": "u"}, "mi": {"tag": "u", "abend": "u"}, "do": {"tag": "u", "abend": "u"}, "fr": {"tag": "u", "abend": "u"}, "sa": {"tag": "u", "abend": "u"} },
+          "Tina": { "sa": {"abend": "Se 17–23"} },
+          "Pia": { "di": {"tag": "x", "abend": "kü"}, "mi": {"tag": "kü", "abend": "x"}, "do": {"tag": "x", "abend": "x"}, "fr": {"tag": "x", "abend": "kü"}, "sa": {"tag": "kü", "abend": "kü"} }
+        }
+      },
+      "2026-11-02": {
+        "events": {},
+        "soll": { "di": {"tag": 2, "abend": 3}, "mi": {"tag": 2, "abend": 3}, "do": {"tag": 2, "abend": 2}, "fr": {"tag": 2, "abend": 3}, "sa": {"tag": 2, "abend": 2} },
+        "note": "Martina ganztägig Urlaub",
+        "shifts": {
+          "Max": { "di": {"abend": "se"}, "mi": {"abend": "se"}, "fr": {"abend": "u"}, "sa": {"abend": "se"} },
+          "Patricia": { "mi": {"tag": "se"}, "do": {"tag": "se"}, "fr": {"tag": "se"} },
+          "Martina": { "mo": {"tag": "u", "abend": "u"}, "di": {"tag": "u", "abend": "u"}, "mi": {"tag": "u", "abend": "u"}, "do": {"tag": "u", "abend": "u"}, "fr": {"tag": "u", "abend": "u"}, "sa": {"tag": "u", "abend": "u"} },
+          "Pia": { "di": {"tag": "x", "abend": "kü"}, "mi": {"tag": "kü", "abend": "x"}, "do": {"tag": "x", "abend": "x"}, "fr": {"tag": "x", "abend": "kü"}, "sa": {"tag": "kü", "abend": "kü"} }
+        }
+      },
+      "2026-11-09": {
+        "events": { "sa": "12 Personen reservierung Abend" },
+        "soll": { "di": {"tag": 2, "abend": 3}, "mi": {"tag": 2, "abend": 3}, "do": {"tag": 2, "abend": 2}, "fr": {"tag": 2, "abend": 3}, "sa": {"tag": 1, "abend": 2} },
+        "note": "Do Abend: Max frei · Mi Tag: Patricia bons · Mi Tag: Valeria noch offen (?)",
+        "shifts": {
+          "Max": { "di": {"abend": "se"}, "mi": {"tag": "th", "abend": "se"}, "fr": {"abend": "f"}, "sa": {"abend": "se"} },
+          "Patricia": { "mi": {"tag": "bons"}, "do": {"tag": "se"}, "fr": {"tag": "se"} },
+          "Martina": { "di": {"tag": "se"} },
+          "Tina": { "mi": {"tag": "th"} },
+          "Valeria": { "mi": {"tag": "?"} },
+          "Pia": { "di": {"tag": "x", "abend": "kü"}, "mi": {"tag": "x", "abend": "x"}, "do": {"tag": "x", "abend": "x"}, "fr": {"tag": "x", "abend": "kü"}, "sa": {"tag": "kü", "abend": "kü"} }
+        }
+      },
+      "2026-11-16": {
+        "events": { "fr": "20 Personen Geburtstag Abend - Küche gebraucht" },
+        "soll": { "di": {"tag": 2, "abend": 3}, "mi": {"tag": 2, "abend": 3}, "do": {"tag": 2, "abend": 1}, "fr": {"tag": 2, "abend": 3}, "sa": {"tag": 1, "abend": 2} },
+        "note": "Do Abend: Max frei",
+        "shifts": {
+          "Max": { "di": {"abend": "se"}, "mi": {"abend": "se"}, "fr": {"abend": "f"}, "sa": {"tag": "se", "abend": "se"} },
+          "Patricia": { "mi": {"tag": "se"}, "do": {"tag": "se"}, "fr": {"tag": "se"} },
+          "Martina": { "di": {"tag": "se"} },
+          "Pia": { "di": {"tag": "x", "abend": "kü"}, "mi": {"tag": "x", "abend": "x"}, "do": {"tag": "x", "abend": "x"}, "fr": {"tag": "x", "abend": "kü"}, "sa": {"tag": "kü", "abend": "kü"} }
+        }
+      },
+      "2026-11-23": {
+        "events": {},
+        "soll": { "di": {"tag": 2, "abend": 3}, "mi": {"tag": 2, "abend": 3}, "do": {"tag": 3, "abend": 2}, "fr": {"tag": 2, "abend": 3}, "sa": {"tag": 1, "abend": 2} },
+        "note": "Do Abend: Max frei · Do Abend: Patricia unsicher",
+        "shifts": {
+          "Max": { "di": {"abend": "se"}, "mi": {"abend": "se"}, "fr": {"abend": "F"}, "sa": {"tag": "se", "abend": "se"} },
+          "Patricia": { "mi": {"tag": "se"}, "do": {"tag": "se", "abend": "se?"}, "fr": {"tag": "se"} },
+          "Martina": { "di": {"tag": "se"}, "do": {"tag": "kü"} },
+          "Pia": { "di": {"tag": "x", "abend": "kü"}, "mi": {"tag": "x", "abend": "x"}, "do": {"tag": "x", "abend": "x"}, "fr": {"tag": "x", "abend": "kü"}, "sa": {"tag": "kü", "abend": "kü"} }
+        }
+      }
+    };
+
     let db = {};
     try {
-      db = JSON.parse(localStorage.getItem('heiders_dienstplan_db')) || {};
-    } catch(e) {
-      db = {};
-    }
+      db = JSON.parse(localStorage.getItem('heiders_dienstplan_db')) || seedDB;
+    } catch(e) { db = seedDB; }
 
     const daysOfWeek = [
       { key: 'mo', label: 'Montag', isSpecial: true },
@@ -171,27 +322,59 @@
     ];
 
     function init() {
-      populateUserSelect();
+      if (!currentUser) {
+        showLoginModal();
+      } else {
+        setupUserInterface();
+      }
       loadWeekData();
       renderApp();
     }
 
-    function populateUserSelect() {
-      const select = document.getElementById('userSelect');
-      select.innerHTML = team.map(m => `<option value="${m.name}" ${m.name === currentUser ? 'selected' : ''}>${m.name} ${m.isAdmin ? '(Admin)' : ''}</option>`).join('');
+    function showLoginModal() {
+      const select = document.getElementById('initialUserSelect');
+      select.innerHTML = team.map(m => `<option value="${m.name}">${m.name} (${m.role})</option>`).join('');
+      document.getElementById('loginModal').classList.remove('hidden');
+    }
+
+    function confirmUserChoice() {
+      const selected = document.getElementById('initialUserSelect').value;
+      currentUser = selected;
+      localStorage.setItem('heiders_user', currentUser);
+      document.getElementById('loginModal').classList.add('hidden');
+      setupUserInterface();
+      renderApp();
+    }
+
+    function resetUserChoice() {
+      localStorage.removeItem('heiders_user');
+      currentUser = null;
+      showLoginModal();
+    }
+
+    function setupUserInterface() {
+      const userObj = team.find(t => t.name === currentUser) || team[1];
+      document.getElementById('userBadgeName').innerText = currentUser;
+      document.getElementById('currentUserDisplay').innerText = currentUser;
+
+      const adminWrapper = document.getElementById('adminUserSelectWrapper');
+      const adminControls = document.getElementById('adminControls');
+
+      if (userObj.isAdmin) {
+        adminWrapper.classList.remove('hidden');
+        adminControls.classList.remove('hidden');
+        const select = document.getElementById('userSelect');
+        select.innerHTML = team.map(m => `<option value="${m.name}" ${m.name === currentUser ? 'selected' : ''}>${m.name}</option>`).join('');
+      } else {
+        adminWrapper.classList.add('hidden');
+        adminControls.classList.add('hidden');
+      }
     }
 
     function changeUser(userName) {
       currentUser = userName;
       document.getElementById('currentUserDisplay').innerText = currentUser;
-      const u = team.find(t => t.name === currentUser);
-      
-      const adminCtrl = document.getElementById('adminControls');
-      if (u && u.isAdmin) {
-        adminCtrl.classList.remove('hidden');
-      } else {
-        adminCtrl.classList.add('hidden');
-      }
+      document.getElementById('userBadgeName').innerText = currentUser;
       renderApp();
     }
 
@@ -215,7 +398,7 @@
       const weekKey = getWeekKey(currentWeekStart);
       if (!db[weekKey]) {
         db[weekKey] = {
-          events: { di: '', mi: '', do: 'Lesung am Abend', fr: '', sa: '', mo: '', so: '' },
+          events: { di: '', mi: '', do: '', fr: '', sa: '', mo: '', so: '' },
           soll: {
             di: { tag: 2, abend: 3 },
             mi: { tag: 2, abend: 3 },
@@ -225,16 +408,17 @@
             mo: { tag: 0, abend: 0 },
             so: { tag: 0, abend: 0 }
           },
+          note: '',
           shifts: {}
         };
 
         team.forEach(m => {
           db[weekKey].shifts[m.name] = {
-            di: { tag: (m.name === 'Pia' ? 'Kü' : '-'), abend: (m.name === 'Pia' ? 'Kü' : '-'), timeTag: '', timeAbend: '' },
-            mi: { tag: (m.name === 'Pia' ? 'Kü' : '-'), abend: (m.name === 'Pia' ? 'x' : '-'), timeTag: '', timeAbend: '' },
-            do: { tag: (m.name === 'Pia' ? 'x' : '-'), abend: (m.name === 'Pia' ? 'x' : '-'), timeTag: '', timeAbend: '' },
-            fr: { tag: (m.name === 'Pia' ? 'x' : '-'), abend: (m.name === 'Pia' ? 'Kü' : '-'), timeTag: '', timeAbend: '' },
-            sa: { tag: (m.name === 'Pia' ? 'Kü' : '-'), abend: (m.name === 'Pia' ? 'Kü' : '-'), timeTag: '', timeAbend: '' }
+            di: { tag: (m.name === 'Pia' ? 'kü' : '-'), abend: (m.name === 'Pia' ? 'kü' : '-'), timeTag: '', timeAbend: '' },
+            mi: { tag: (m.name === 'Pia' ? 'kü' : '-'), abend: (m.name === 'Pia' ? 'se' : '-'), timeTag: '', timeAbend: '' },
+            do: { tag: (m.name === 'Pia' ? 'th' : '-'), abend: (m.name === 'Pia' ? 'se' : '-'), timeTag: '', timeAbend: '' },
+            fr: { tag: (m.name === 'Pia' ? 'se' : '-'), abend: (m.name === 'Pia' ? 'kü' : '-'), timeTag: '', timeAbend: '' },
+            sa: { tag: (m.name === 'Pia' ? 'kü' : '-'), abend: (m.name === 'Pia' ? 'kü' : '-'), timeTag: '', timeAbend: '' }
           };
         });
         saveDB();
@@ -277,6 +461,27 @@
       }
     }
 
+    function toggleNoteEdit() {
+      const box = document.getElementById('noteEditBox');
+      const weekKey = getWeekKey(currentWeekStart);
+      if (box.classList.contains('hidden')) {
+        box.classList.remove('hidden');
+        document.getElementById('noteInput').value = db[weekKey]?.note || '';
+      } else {
+        box.classList.add('hidden');
+      }
+    }
+
+    function saveWeekNote() {
+      const weekKey = getWeekKey(currentWeekStart);
+      const text = document.getElementById('noteInput').value;
+      if (!db[weekKey]) db[weekKey] = {};
+      db[weekKey].note = text;
+      saveDB();
+      document.getElementById('noteEditBox').classList.add('hidden');
+      renderApp();
+    }
+
     function renderApp() {
       const weekKey = getWeekKey(currentWeekStart);
       const weekEnd = new Date(currentWeekStart);
@@ -284,6 +489,9 @@
 
       document.getElementById('weekTitle').innerText = `Woche ab Mo, ${formatDateShort(currentWeekStart)}.`;
       document.getElementById('weekRange').innerText = `${formatDateShort(currentWeekStart)} – ${formatDateShort(weekEnd)}.2026`;
+
+      const noteText = db[weekKey]?.note;
+      document.getElementById('noteDisplay').innerText = noteText ? noteText : 'Keine Notizen für diese Woche.';
 
       checkAlarmsAndCapacities();
       renderMyShiftsTab();
@@ -312,10 +520,10 @@
 
           team.forEach(m => {
             const shiftVal = weekData.shifts[m.name]?.[dayKey]?.[schicht] || '-';
-            if (shiftVal === 'x' || shiftVal === 'Kü') {
+            if (shiftVal !== '-' && !['u', 'k', 'f', 'urlaub', 'krank', 'frei'].includes(shiftVal.toLowerCase())) {
               countDa++;
             }
-            if (shiftVal === 'Kü') {
+            if (shiftVal.toLowerCase().includes('kü')) {
               hasKitchen = true;
             }
           });
@@ -380,10 +588,10 @@
               </div>
               
               <div class="grid grid-cols-2 gap-1 mb-2">
-                <button onclick="updateShift('${dayKey}', 'tag', 'x')" class="py-1 px-1 rounded text-[11px] font-bold border ${userShifts.tag === 'x' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-stone-700 border-stone-300'}">
+                <button onclick="updateShift('${dayKey}', 'tag', 'se')" class="py-1 px-1 rounded text-[11px] font-bold border ${['se','x','th'].includes(userShifts.tag.toLowerCase()) ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-stone-700 border-stone-300'}">
                   Service/Theke
                 </button>
-                <button onclick="updateShift('${dayKey}', 'tag', 'Kü')" class="py-1 px-1 rounded text-[11px] font-bold border ${userShifts.tag === 'Kü' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-stone-700 border-stone-300'}">
+                <button onclick="updateShift('${dayKey}', 'tag', 'kü')" class="py-1 px-1 rounded text-[11px] font-bold border ${userShifts.tag.toLowerCase().includes('kü') ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-stone-700 border-stone-300'}">
                   Küche
                 </button>
                 <button onclick="updateShift('${dayKey}', 'tag', 'Springer')" class="py-1 px-1 rounded text-[11px] font-bold border ${userShifts.tag === 'Springer' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-stone-700 border-stone-300'}">
@@ -412,10 +620,10 @@
               </div>
               
               <div class="grid grid-cols-2 gap-1 mb-2">
-                <button onclick="updateShift('${dayKey}', 'abend', 'x')" class="py-1 px-1 rounded text-[11px] font-bold border ${userShifts.abend === 'x' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-stone-700 border-stone-300'}">
+                <button onclick="updateShift('${dayKey}', 'abend', 'se')" class="py-1 px-1 rounded text-[11px] font-bold border ${['se','x','th'].includes(userShifts.abend.toLowerCase()) ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-stone-700 border-stone-300'}">
                   Service/Theke
                 </button>
-                <button onclick="updateShift('${dayKey}', 'abend', 'Kü')" class="py-1 px-1 rounded text-[11px] font-bold border ${userShifts.abend === 'Kü' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-stone-700 border-stone-300'}">
+                <button onclick="updateShift('${dayKey}', 'abend', 'kü')" class="py-1 px-1 rounded text-[11px] font-bold border ${userShifts.abend.toLowerCase().includes('kü') ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-stone-700 border-stone-300'}">
                   Küche
                 </button>
                 <button onclick="updateShift('${dayKey}', 'abend', 'Springer')" class="py-1 px-1 rounded text-[11px] font-bold border ${userShifts.abend === 'Springer' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-stone-700 border-stone-300'}">
@@ -467,17 +675,32 @@
       const weekData = db[weekKey];
 
       const headerRow = document.getElementById('tableHeaderRow');
-      headerRow.innerHTML = `<th class="p-2 w-28 border-r border-stone-200">Mitarbeiter</th>`;
+      headerRow.innerHTML = `<th class="p-2 w-32 sticky-col border-r border-stone-200">Mitarbeiter</th>`;
 
       daysOfWeek.forEach((dayObj, index) => {
         if (dayObj.isSpecial && !showSpecialDays) return;
         const dateStr = formatDateShort(getDateForDay(index));
+        const dayKey = dayObj.key;
+        const soll = weekData.soll[dayKey] || { tag: 0, abend: 0 };
+
+        let dayHasIssue = false;
+        ['tag', 'abend'].forEach(s => {
+          let count = 0;
+          let kitchen = false;
+          team.forEach(m => {
+            const v = weekData.shifts[m.name]?.[dayKey]?.[s] || '-';
+            if (v !== '-' && !['u', 'k', 'f'].includes(v.toLowerCase())) count++;
+            if (v.toLowerCase().includes('kü')) kitchen = true;
+          });
+          if (count < (soll[s]||0) || (!kitchen && (soll[s]||0) > 0)) dayHasIssue = true;
+        });
+
         headerRow.innerHTML += `
-          <th class="p-1.5 text-center border-r border-stone-200 min-w-[80px]">
+          <th class="p-1.5 text-center border-r border-stone-200 min-w-[85px] ${dayHasIssue ? 'bg-red-100/90 text-red-900 border-b-2 border-b-red-600' : ''}">
             <div class="font-bold text-xs">${dayObj.label}</div>
-            <div class="text-[10px] text-stone-500">${dateStr}</div>
-            <div class="flex justify-around text-[9px] mt-1 text-stone-400 font-normal">
-              <span>Tag</span><span>Abend</span>
+            <div class="text-[10px] ${dayHasIssue ? 'text-red-700 font-bold' : 'text-stone-500'}">${dateStr}</div>
+            <div class="flex justify-around text-[9px] mt-1 font-normal">
+              <span>T (Soll:${soll.tag})</span><span>A (Soll:${soll.abend})</span>
             </div>
           </th>
         `;
@@ -490,7 +713,7 @@
         const tr = document.createElement('tr');
         tr.className = m.name === currentUser ? 'bg-amber-50/60 font-medium' : 'hover:bg-stone-50';
 
-        let nameTd = `<td class="p-2 font-bold text-[#2B2321] border-r border-stone-200 flex flex-col">
+        let nameTd = `<td class="p-2 font-bold text-[#2B2321] sticky-col border-r border-stone-200 flex flex-col">
           <span>${m.name}</span>
           <span class="text-[9px] text-stone-500 font-normal">${m.role}</span>
         </td>`;
@@ -502,9 +725,17 @@
 
           const formatShiftCell = (val, time) => {
             let badge = `<span class="text-stone-300">-</span>`;
-            if (val === 'x') badge = `<span class="px-1 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold">x</span>`;
-            if (val === 'Kü') badge = `<span class="px-1 py-0.5 bg-amber-100 text-amber-900 rounded font-bold">Kü</span>`;
-            if (val === 'Springer') badge = `<span class="px-1 py-0.5 bg-blue-100 text-blue-800 rounded text-[9px]">S</span>`;
+            const vLower = val.toLowerCase();
+
+            if (['x', 'se', 'th'].includes(vLower)) {
+              badge = `<span class="px-1 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold text-[10px]">${val}</span>`;
+            } else if (vLower.includes('kü')) {
+              badge = `<span class="px-1 py-0.5 bg-amber-100 text-amber-900 rounded font-bold text-[10px]">${val}</span>`;
+            } else if (vLower === 'springer') {
+              badge = `<span class="px-1 py-0.5 bg-blue-100 text-blue-800 rounded text-[9px]">S</span>`;
+            } else if (val !== '-') {
+              badge = `<span class="px-1 py-0.5 bg-stone-200 text-stone-800 rounded text-[9px] font-bold">${val}</span>`;
+            }
             
             const timeHint = (time && time !== 'Standard (regulär)') ? `<span class="block text-[8px] text-stone-500 leading-none mt-0.5">${time.replace('ab ', '')}</span>` : '';
             return `<div class="text-center">${badge}${timeHint}</div>`;
