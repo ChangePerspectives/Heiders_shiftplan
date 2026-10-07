@@ -137,6 +137,9 @@ input,select,textarea{font-size:16px}
 .editor-week-picker .week-calendar-input{position:absolute;width:100%;min-height:0;font-size:16px}
 #editorWeekLabel{display:inline;font-size:15px}
 #inboxPanel{position:relative;overscroll-behavior:contain;scroll-padding-top:20px}
-.inbox-top-button{position:sticky;bottom:0;display:block;margin:12px 0 0 auto;width:48px;height:48px;min-height:48px;border-radius:50%;background:var(--red);color:white;font-size:26px;font-weight:800;box-shadow:0 3px 12px #41404033;z-index:2}
+ .inbox-top-button{position:sticky;bottom:4px;display:grid;place-items:center;margin:12px 0 0 auto;width:48px;height:48px;min-width:48px;min-height:48px;padding:0;border:0;border-radius:50%;background:var(--red);color:white;box-shadow:0 4px 12px #41404026;z-index:2;transition:background-color .15s,box-shadow .15s}
+.inbox-top-button svg{display:block;width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.inbox-top-button:active{background:var(--red-dark);box-shadow:0 2px 6px #41404026}
+@media(hover:hover){.inbox-top-button:hover{background:var(--red-dark);box-shadow:0 5px 14px #41404033}}
 @media(max-width:380px){.compact-week-text{gap:5px}.week-nav .compact-week-text strong,#editorWeekLabel{font-size:13px}.week-nav>button,.editor-week-picker>button{padding:8px;min-width:40px}.compact-week-text small{font-size:11px}}
 @media(max-height:480px){.editor-week-picker .compact-week-select{display:block}.editor-week-picker .week-calendar-input{width:100%}#editorWeekLabel{display:inline}.editor-week-picker .compact-week-text{padding:5px;min-height:40px}}
