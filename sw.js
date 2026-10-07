@@ -1,8 +1,8 @@
 // Bei jeder Veröffentlichung CACHE_VERSION ändern (oder dieses Paket vollständig ersetzen).
-const CACHE_VERSION = 'v4-10-overview-home-icon-20261007';
+const CACHE_VERSION = 'v4-11-email-codes-push-20261007';
 const PREFIX = 'heiders-app-';
 const CACHE = PREFIX + CACHE_VERSION;
-const SHELL = ["./", "./index.html", "./cloud.js", "./config.js", "./supabase.js", "./design.css", "./design.js", "./demo.js", "./manifest-v4-10.webmanifest", "./icon-192-v4-10.png", "./icon-512-v4-10.png", "./icon-maskable-512-v4-10.png", "./apple-touch-icon-v4-10.png", "./jspdf.js", "./pdf-font.js", "./pdf-export.js"];
+const SHELL = ["./", "./index.html", "./cloud.js", "./auth.js", "./push.js", "./push-config.js", "./config.js", "./supabase.js", "./design.css", "./design.js", "./demo.js", "./manifest-v4-10.webmanifest", "./icon-192-v4-10.png", "./icon-512-v4-10.png", "./icon-maskable-512-v4-10.png", "./apple-touch-icon-v4-10.png", "./jspdf.js", "./pdf-font.js", "./pdf-export.js"];
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);
@@ -43,4 +43,23 @@ self.addEventListener('fetch', event => {
       throw error;
     }
   })());
+});
+
+self.addEventListener('push',event=>{
+ event.waitUntil((async()=>{
+  let data;try{data=event.data?.json();}catch(_){}
+  // Keine personenbezogenen Inhalte auf dem Sperrbildschirm anzeigen.
+  if(data?.type!=='heiders-unread')return;
+  await self.registration.showNotification('Heiders Dienstplan',{body:'Neue Nachrichten oder Schichtanfragen. Bitte in der App ansehen.',tag:'heiders-unread',icon:new URL('./icon-192-v4-10.png',self.registration.scope).href,data:{type:'heiders-unread'}});
+  try{if(self.navigator.setAppBadge)await self.navigator.setAppBadge();}catch(_){}
+ })());
+});
+self.addEventListener('notificationclick',event=>{
+ if(event.notification.data?.type!=='heiders-unread')return;
+ event.notification.close();event.waitUntil((async()=>{
+  const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+  const existing=windows.find(client=>client.url.startsWith(self.registration.scope));
+  if(existing){await existing.focus();existing.postMessage({type:'OPEN_HEIDERS_INBOX'});}
+  else await self.clients.openWindow(new URL('./?inbox=1',self.registration.scope).href);
+ })());
 });

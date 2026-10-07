@@ -25,6 +25,9 @@ function cloudBlankWeek() {
   return {events:{},resTag:{},resAbend:{},soll:{mo:{tag:0,abend:0},di:{tag:2,abend:3},mi:{tag:2,abend:3},do:{tag:2,abend:2},fr:{tag:2,abend:3},sa:{tag:2,abend:3},so:{tag:0,abend:0}},note:'',shiftSources:Object.create(null),shifts:Object.create(null),noteRevision:0,settingsRevision:0};
 }
 function cloudClear() {
+  if(typeof resetCodeLogin==='function')resetCodeLogin();
+  if(typeof teamLoginEmails!=='undefined')teamLoginEmails.clear();
+  if(typeof clearPushBadge==='function')clearPushBadge();
   cloudRequest++;cloudLoadedWeek=null;cloudDeadline=null;cloudInbox={items:[],unread:0};cloudTransfers=[];cloudIncoming=[];cloudCapacity=[];cloudPool=[];cloudRule=null;closeWithdrawal();closeInbox();closeTransfer();closeEmployees();closeAdminAssignment();
   cloudActor=null; cloudSession=null; currentUser=null; team=[]; db={}; cloudShiftRevisions.clear();
   document.getElementById('appMain').hidden=true;
@@ -151,6 +154,7 @@ async function resetUserChoice() {
   if(window.heidersDemoActive){exitDemo();return;}
   if(cloudBusy) {cloudStatus('Bitte zuerst die Speicherung abwarten.');return;}
   if(!cloudClient) return;
+  if(typeof disableDevicePush==='function')await disableDevicePush();
   await cloudClient.auth.signOut({scope:'local'});cloudClear();
 }
 function setupUserInterface() {
