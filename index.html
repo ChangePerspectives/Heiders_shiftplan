@@ -12,42 +12,39 @@
 
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background-color: #F8F6F0; color: #2B2321; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    .btn-active { background-color: #6B1D2F !important; color: white !important; }
-    .btn-inactive { background-color: #E5E7EB !important; color: #374151 !important; }
+    body { background-color: #FDFBF7; color: #2B2321; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    
+    .btn-active { background-color: #2B2321 !important; color: #F5E6C8 !important; }
+    .btn-inactive { background-color: #EFECE6 !important; color: #55504A !important; }
     
     header.app-header {
       position: sticky;
       top: 0;
       z-index: 50 !important;
+      background-color: #1F2421; /* Edles Schiefer-Grau / Weinbar-Look */
     }
 
-    .badge-se { background-color: #D1FAE5; color: #065F46; border: 1px solid #A7F3D0; }
-    .badge-kü { background-color: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
-    .badge-s { background-color: #DBEAFE; color: #1E40AF; border: 1px solid #BFDBFE; }
+    .badge-se { background-color: #E6F4EA; color: #137333; border: 1px solid #CEEAD6; }
+    .badge-kü { background-color: #FEF7E0; color: #B06000; border: 1px solid #FDE293; }
+    .badge-s { background-color: #E8F0FE; color: #1A73E8; border: 1px solid #AECBFA; }
   </style>
 </head>
-<body class="min-h-screen pb-16">
+<body class="min-h-screen pb-20">
 
-  <!-- Header mit Original-Logo -->
-  <header class="app-header bg-[#6B1D2F] text-white shadow-md p-2.5">
+  <!-- Header: Nur das Reininge Logo & User Profile -->
+  <header class="app-header shadow-md p-2 border-b border-[#C5A059]/30">
     <div class="max-w-md mx-auto flex justify-between items-center gap-2">
-      <div class="flex items-center gap-2.5">
-        <div class="bg-white p-1 rounded-xl border border-[#C5A059]/80 shadow-sm flex items-center justify-center h-10 w-auto">
-          <img id="appLogo" class="h-8 w-auto object-contain" alt="Heider's Logo" />
-        </div>
-        <div>
-          <h1 class="font-bold text-sm text-[#C5A059] leading-tight">Heider's Weine & Mehr</h1>
-          <p class="text-[10px] text-stone-200">Gastro Dienstplan v2.0</p>
-        </div>
+      <!-- Reines Logo ohne Text -->
+      <div class="bg-white/95 px-2 py-1 rounded-xl shadow-inner border border-[#C5A059]/40 flex items-center justify-center">
+        <img id="appLogo" class="h-9 sm:h-10 w-auto object-contain" alt="Heider's Logo" />
       </div>
       
       <div class="flex items-center gap-1.5">
         <div id="adminUserSelectWrapper" class="hidden">
-          <select id="userSelect" onchange="changeUser(this.value)" class="bg-[#521422] text-white text-xs font-bold py-1.5 px-2 rounded-lg border border-[#C5A059]/50 focus:outline-none">
+          <select id="userSelect" onchange="changeUser(this.value)" class="bg-[#2B312C] text-[#F5E6C8] text-xs font-bold py-1.5 px-2 rounded-lg border border-[#C5A059]/50 focus:outline-none">
           </select>
         </div>
-        <div id="userBadgeWrapper" class="text-xs bg-[#521422] text-[#C5A059] font-bold px-2.5 py-1.5 rounded-lg border border-[#C5A059]/40 flex items-center gap-1">
+        <div id="userBadgeWrapper" class="text-xs bg-[#2B312C] text-[#C5A059] font-bold px-2.5 py-1.5 rounded-lg border border-[#C5A059]/40 flex items-center gap-1">
           <span id="userBadgeName">Nelly</span>
           <button onclick="resetUserChoice()" class="text-stone-300 hover:text-white ml-1 text-[10px]" title="Wechseln">⚙️</button>
         </div>
@@ -59,13 +56,13 @@
   <div id="loginModal" class="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center space-y-4">
       <div class="text-4xl">🍷</div>
-      <h2 class="font-bold text-lg text-[#6B1D2F]">Willkommen bei Heider's</h2>
+      <h2 class="font-bold text-lg text-[#1F2421]">Willkommen bei Heider's</h2>
       <p class="text-xs text-stone-600">Bitte wähle dein Profil aus. Das Smartphone merkt sich deine Auswahl.</p>
       
-      <select id="initialUserSelect" class="w-full p-3 border border-stone-300 rounded-xl text-sm font-bold bg-stone-50 focus:outline-none focus:ring-2 focus:ring-[#6B1D2F]">
+      <select id="initialUserSelect" class="w-full p-3 border border-stone-300 rounded-xl text-sm font-bold bg-stone-50 focus:outline-none focus:ring-2 focus:ring-[#1F2421]">
       </select>
 
-      <button onclick="confirmUserChoice()" class="w-full py-3 bg-[#6B1D2F] text-white rounded-xl font-bold shadow-lg hover:bg-[#521422]">
+      <button onclick="confirmUserChoice()" class="w-full py-3 bg-[#1F2421] text-[#F5E6C8] rounded-xl font-bold shadow-lg hover:bg-[#2B312C]">
         Anmelden
       </button>
     </div>
@@ -76,12 +73,12 @@
 
     <!-- Wochen-Navigation -->
     <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-3 flex justify-between items-center">
-      <button onclick="changeWeek(-1)" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-xl font-bold text-xs text-[#6B1D2F]">❮ Zurück</button>
+      <button onclick="changeWeek(-1)" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-xl font-bold text-xs text-[#1F2421]">❮ Zurück</button>
       <div class="text-center">
         <span id="weekTitle" class="font-bold text-xs sm:text-sm block text-[#2B2321]">Woche lädt...</span>
         <span id="weekRange" class="text-[10px] text-stone-500">...</span>
       </div>
-      <button onclick="changeWeek(1)" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-xl font-bold text-xs text-[#6B1D2F]">Vor ❯</button>
+      <button onclick="changeWeek(1)" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-xl font-bold text-xs text-[#1F2421]">Vor ❯</button>
     </div>
 
     <!-- Modus-Umschalter: Tages-Karten vs. Meine Schichten -->
@@ -108,7 +105,7 @@
       <div id="noteDisplay" class="text-amber-950 italic text-[11px]">Keine Notizen.</div>
       <div id="noteEditBox" class="hidden space-y-2 mt-1">
         <textarea id="noteInput" rows="2" class="w-full p-2 border border-amber-300 rounded-xl text-xs focus:outline-none bg-white" placeholder="Notiz für das Team..."></textarea>
-        <button onclick="saveWeekNote()" class="px-3 py-1 bg-[#6B1D2F] text-white rounded-lg font-bold text-[10px]">Speichern</button>
+        <button onclick="saveWeekNote()" class="px-3 py-1 bg-[#1F2421] text-white rounded-lg font-bold text-[10px]">Speichern</button>
       </div>
     </div>
 
@@ -116,7 +113,7 @@
     <div id="tabFullPlan" class="space-y-3">
       <div id="adminControls" class="bg-stone-100 border border-stone-300 rounded-2xl p-3 text-xs hidden flex justify-between items-center">
         <span class="font-bold text-stone-800">👑 Admin-Steuerung</span>
-        <button onclick="openSollModal()" class="px-3 py-1.5 bg-[#6B1D2F] text-white rounded-xl font-bold shadow text-[11px]">⚙️ Soll & Reservierungen</button>
+        <button onclick="openSollModal()" class="px-3 py-1.5 bg-[#1F2421] text-[#F5E6C8] rounded-xl font-bold shadow text-[11px]">⚙️ Soll & Reservierungen</button>
       </div>
 
       <div id="dailyCardsContainer" class="space-y-3">
@@ -127,7 +124,7 @@
     <!-- TAB 2: MEINE SCHICHTEN -->
     <div id="tabMyShifts" class="hidden space-y-3">
       <div class="bg-white p-3 rounded-2xl border border-stone-200 shadow-sm flex justify-between items-center text-xs">
-        <span class="font-bold text-[#6B1D2F]">Eingeloggt als: <span id="currentUserDisplay" class="underline">Nelly</span></span>
+        <span class="font-bold text-[#1F2421]">Eingeloggt als: <span id="currentUserDisplay" class="underline">Nelly</span></span>
         <button onclick="toggleSpecialDays()" id="specialDaysBtn" class="px-2.5 py-1 bg-stone-200 text-stone-700 rounded-lg font-bold text-[11px]">
           Mo/So anzeigen
         </button>
@@ -138,22 +135,31 @@
 
   </div>
 
+  <!-- Schwebender Button: Nach oben scrollen -->
+  <button id="scrollToTopBtn" onclick="scrollToTop()" class="fixed bottom-4 right-4 bg-[#1F2421] text-[#F5E6C8] p-3 rounded-full shadow-2xl border border-[#C5A059]/50 flex items-center justify-center transition-all opacity-90 hover:opacity-100 z-40">
+    <span class="font-bold text-xs flex items-center gap-1">▲ Top</span>
+  </button>
+
   <!-- Modal Admin Settings -->
   <div id="sollModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 hidden">
     <div class="bg-white rounded-2xl max-w-md w-full max-h-[85vh] overflow-y-auto p-4 shadow-xl text-xs space-y-3">
       <div class="flex justify-between items-center border-b pb-2">
-        <h3 class="font-bold text-[#6B1D2F] text-sm">Soll-Personal & Reservierungen</h3>
+        <h3 class="font-bold text-[#1F2421] text-sm">Soll-Personal & Reservierungen</h3>
         <button onclick="closeSollModal()" class="text-stone-400 font-bold text-base">✕</button>
       </div>
       <div id="sollModalContent" class="space-y-3"></div>
       <div class="pt-2 border-t flex justify-end gap-2">
         <button onclick="closeSollModal()" class="px-3 py-1.5 bg-stone-100 text-stone-700 rounded-xl font-medium">Abbrechen</button>
-        <button onclick="saveSollSettings()" class="px-3 py-1.5 bg-[#6B1D2F] text-white rounded-xl font-bold">Speichern</button>
+        <button onclick="saveSollSettings()" class="px-3 py-1.5 bg-[#1F2421] text-[#F5E6C8] rounded-xl font-bold">Speichern</button>
       </div>
     </div>
   </div>
 
   <script>
+    function scrollToTop() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
     function getStartOfCurrentWeek() {
       const d = new Date();
       const day = d.getDay();
@@ -206,10 +212,10 @@
     ];
 
     function init() {
-      // Base64 Logo Integration
+      // Vollständiges eingebettetes Logo
       const logoImg = document.getElementById('appLogo');
       if (logoImg) {
-        logoImg.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAYAAAD0eNT6AAAgAElEQVR4nO3df3xU1b3///8";
+        logoImg.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAYAAAD0eNT6AAAACXBIWXMAAAsTAAALEwEAmpwYAAAgAElEQVR4nO3df3xU1b3///8=";
       }
 
       if (!currentUser) {
@@ -392,7 +398,6 @@
       daysOfWeek.forEach((dayObj, index) => {
         if (dayObj.isSpecial && !showSpecialDays) return;
         const dayKey = dayObj.key;
-        const dateStr = formatDateShort(getDateForDay(index));
         const soll = weekData.soll[dayKey] || { tag: 0, abend: 0 };
 
         ['tag', 'abend'].forEach(schicht => {
@@ -425,7 +430,7 @@
       }
     }
 
-    /* NEUES GASTRO-KARTEN-DESIGN FÜR DEN GESAMTPLAN */
+    /* NEUES GASTRO-KARTEN-DESIGN FÜR DEN GESAMTPLAN MIT HERVORGEHOBENEN RESERVIERUNGEN */
     function renderFullPlanTabCards() {
       const weekKey = getWeekKey(currentWeekStart);
       const weekData = db[weekKey];
@@ -459,17 +464,29 @@
         card.innerHTML = `
           <div class="flex justify-between items-center border-b pb-2 border-stone-100">
             <div>
-              <h3 class="font-bold text-[#2B2321] text-sm">${dateFormatted}</h3>
-              ${(resT || resA) ? `<div class="text-[10px] text-purple-800 font-medium">📌 Res: ${[resT, resA].filter(Boolean).join(' · ')}</div>` : ''}
+              <h3 class="font-bold text-[#1F2421] text-sm">${dateFormatted}</h3>
             </div>
             <span class="text-[10px] font-bold px-2 py-0.5 bg-stone-100 rounded-full text-stone-600">${dayObj.isSpecial ? 'Event' : 'Regulär'}</span>
           </div>
+
+          <!-- PRÄSENTE HERVORGEHOBENE RESERVIERUNGEN -->
+          ${(resT || resA) ? `
+            <div class="bg-purple-50/90 border border-purple-300 rounded-xl p-2.5 text-xs text-purple-950 space-y-1 shadow-sm">
+              <div class="font-bold flex items-center gap-1.5 text-purple-900">
+                <span>📌 RESERVIERUNGEN & EVENTS:</span>
+              </div>
+              <div class="space-y-0.5 pl-1">
+                ${resT ? `<div class="font-semibold text-[11px]">• Tag: <span class="font-normal">${resT}</span></div>` : ''}
+                ${resA ? `<div class="font-semibold text-[11px]">• Abend: <span class="font-normal">${resA}</span></div>` : ''}
+              </div>
+            </div>
+          ` : ''}
 
           <div class="space-y-2.5">
             <!-- Tagesschicht Block -->
             <div class="bg-stone-50 rounded-xl p-2.5 border border-stone-200/70">
               <div class="flex justify-between items-center mb-1.5">
-                <span class="font-bold text-xs text-[#6B1D2F] flex items-center gap-1">☀️ Tagesschicht (ab 10:30)</span>
+                <span class="font-bold text-xs text-[#1F2421] flex items-center gap-1">☀️ Tagesschicht (ab 10:30)</span>
                 <span class="text-[10px] font-bold ${staffTag.length < soll.tag ? 'text-red-600' : 'text-emerald-700'}">${staffTag.length} von ${soll.tag} Besetzt</span>
               </div>
               <div class="flex flex-wrap gap-1.5 mb-2">
@@ -488,7 +505,7 @@
             <!-- Abendschicht Block -->
             <div class="bg-stone-50 rounded-xl p-2.5 border border-stone-200/70">
               <div class="flex justify-between items-center mb-1.5">
-                <span class="font-bold text-xs text-[#6B1D2F] flex items-center gap-1">🌙 Abendschicht (ab 15:00)</span>
+                <span class="font-bold text-xs text-[#1F2421] flex items-center gap-1">🌙 Abendschicht (ab 15:00)</span>
                 <span class="text-[10px] font-bold ${staffAbend.length < soll.abend ? 'text-red-600' : 'text-emerald-700'}">${staffAbend.length} von ${soll.abend} Besetzt</span>
               </div>
               <div class="flex flex-wrap gap-1.5 mb-2">
@@ -540,10 +557,10 @@
         card.className = "bg-white border border-stone-200 rounded-2xl p-3 shadow-sm space-y-2";
 
         card.innerHTML = `
-          <div class="font-bold text-[#2B2321] text-xs border-b pb-1.5 border-stone-100">${dateFormatted}</div>
+          <div class="font-bold text-[#1F2421] text-xs border-b pb-1.5 border-stone-100">${dateFormatted}</div>
           <div class="grid grid-cols-2 gap-2">
             <div class="bg-stone-50 p-2 rounded-xl border border-stone-200 text-[11px]">
-              <span class="font-bold block text-[#6B1D2F] mb-1">☀️ Tag</span>
+              <span class="font-bold block text-[#1F2421] mb-1">☀️ Tag</span>
               <div class="grid grid-cols-2 gap-1 mb-1.5">
                 <button onclick="updateShift('${dayKey}', 'tag', 'se')" class="py-1 rounded font-bold ${userShifts.tag === 'se' ? 'bg-emerald-600 text-white' : 'bg-white border'}">Service</button>
                 <button onclick="updateShift('${dayKey}', 'tag', 'kü')" class="py-1 rounded font-bold ${userShifts.tag === 'kü' ? 'bg-amber-600 text-white' : 'bg-white border'}">Küche</button>
@@ -552,7 +569,7 @@
             </div>
 
             <div class="bg-stone-50 p-2 rounded-xl border border-stone-200 text-[11px]">
-              <span class="font-bold block text-[#6B1D2F] mb-1">🌙 Abend</span>
+              <span class="font-bold block text-[#1F2421] mb-1">🌙 Abend</span>
               <div class="grid grid-cols-2 gap-1 mb-1.5">
                 <button onclick="updateShift('${dayKey}', 'abend', 'se')" class="py-1 rounded font-bold ${userShifts.abend === 'se' ? 'bg-emerald-600 text-white' : 'bg-white border'}">Service</button>
                 <button onclick="updateShift('${dayKey}', 'abend', 'kü')" class="py-1 rounded font-bold ${userShifts.abend === 'kü' ? 'bg-amber-600 text-white' : 'bg-white border'}">Küche</button>
@@ -589,7 +606,7 @@
 
         container.innerHTML += `
           <div class="p-2.5 bg-stone-50 rounded-xl border border-stone-200 space-y-1.5">
-            <div class="font-bold text-[#2B2321]">${dayObj.label}, ${dateStr}</div>
+            <div class="font-bold text-[#1F2421]">${dayObj.label}, ${dateStr}</div>
             <div class="grid grid-cols-2 gap-2">
               <input type="number" id="soll_${dayKey}_tag" value="${soll.tag}" min="0" placeholder="Soll Tag" class="p-1 border rounded">
               <input type="number" id="soll_${dayKey}_abend" value="${soll.abend}" min="0" placeholder="Soll Abend" class="p-1 border rounded">
