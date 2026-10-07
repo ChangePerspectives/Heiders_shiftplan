@@ -4,186 +4,131 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Heider's Weine & Mehr · Dienstplan</title>
-  
-  <!-- PWA App Meta Tags -->
+
+  <!-- PWA & Mobile Meta Tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Heider's Plan">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background-color: #FDFBF7; color: #2B2321; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #F8F6F0; color: #2B2321; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     .btn-active { background-color: #6B1D2F !important; color: white !important; }
     .btn-inactive { background-color: #E5E7EB !important; color: #374151 !important; }
-    .custom-scrollbar::-webkit-scrollbar { height: 6px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: #F5EFEE; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #C5A059; border-radius: 3px; }
     
-    /* Header Fix gegen Überlappung beim vertikalen Scrollen */
     header.app-header {
       position: sticky;
       top: 0;
       z-index: 50 !important;
     }
 
-    /* Sticky Tabellenspalte */
-    table.sticky-table {
-      border-collapse: separate !important;
-      border-spacing: 0 !important;
-    }
-    .sticky-col {
-      position: -webkit-sticky !important;
-      position: sticky !important;
-      left: 0 !important;
-      background-color: #FFFFFF !important;
-      z-index: 10 !important;
-      min-width: 130px !important;
-      max-width: 140px !important;
-      border-right: 2px solid #D1D5DB !important;
-      box-shadow: 2px 0 4px -1px rgba(0, 0, 0, 0.12);
-    }
-    th.sticky-col {
-      background-color: #F5EFEE !important;
-      z-index: 15 !important;
-    }
-    tr.user-highlight .sticky-col {
-      background-color: #FEF3C7 !important;
-    }
+    .badge-se { background-color: #D1FAE5; color: #065F46; border: 1px solid #A7F3D0; }
+    .badge-kü { background-color: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
+    .badge-s { background-color: #DBEAFE; color: #1E40AF; border: 1px solid #BFDBFE; }
   </style>
 </head>
-<body class="min-h-screen pb-12">
+<body class="min-h-screen pb-16">
 
-  <!-- Header mit eingebettetem Original-Logo -->
+  <!-- Header mit Original-Logo -->
   <header class="app-header bg-[#6B1D2F] text-white shadow-md p-2.5">
-    <div class="max-w-4xl mx-auto flex justify-between items-center gap-2">
-      <div class="flex items-center gap-2">
-        <!-- Logo Container -->
-        <div class="bg-white p-1 rounded-lg border border-[#C5A059]/80 shadow-sm flex items-center justify-center h-10 w-auto">
+    <div class="max-w-md mx-auto flex justify-between items-center gap-2">
+      <div class="flex items-center gap-2.5">
+        <div class="bg-white p-1 rounded-xl border border-[#C5A059]/80 shadow-sm flex items-center justify-center h-10 w-auto">
           <img id="appLogo" class="h-8 w-auto object-contain" alt="Heider's Logo" />
         </div>
         <div>
-          <h1 class="font-bold text-sm sm:text-base text-[#C5A059] leading-tight">Heider's Weine & Mehr</h1>
-          <p class="text-[10px] text-stone-200">Dienstplan-System</p>
+          <h1 class="font-bold text-sm text-[#C5A059] leading-tight">Heider's Weine & Mehr</h1>
+          <p class="text-[10px] text-stone-200">Gastro Dienstplan v2.0</p>
         </div>
       </div>
+      
       <div class="flex items-center gap-1.5">
-        <!-- Admin-Only Dropdown (Pia & Nelly) -->
         <div id="adminUserSelectWrapper" class="hidden">
-          <select id="userSelect" onchange="changeUser(this.value)" class="bg-[#521422] text-white text-xs font-bold py-1.5 px-2 rounded border border-[#C5A059]/50 focus:outline-none">
+          <select id="userSelect" onchange="changeUser(this.value)" class="bg-[#521422] text-white text-xs font-bold py-1.5 px-2 rounded-lg border border-[#C5A059]/50 focus:outline-none">
           </select>
         </div>
-        <!-- Personal Badge für Mitarbeiter -->
-        <div id="userBadgeWrapper" class="text-xs bg-[#521422] text-[#C5A059] font-bold px-2.5 py-1 rounded border border-[#C5A059]/40 flex items-center gap-1">
+        <div id="userBadgeWrapper" class="text-xs bg-[#521422] text-[#C5A059] font-bold px-2.5 py-1.5 rounded-lg border border-[#C5A059]/40 flex items-center gap-1">
           <span id="userBadgeName">Nelly</span>
-          <button onclick="resetUserChoice()" class="text-stone-300 hover:text-white ml-1 text-[10px]" title="Benutzer wechseln">⚙️</button>
+          <button onclick="resetUserChoice()" class="text-stone-300 hover:text-white ml-1 text-[10px]" title="Wechseln">⚙️</button>
         </div>
       </div>
     </div>
   </header>
 
-  <!-- Login Modal bei Erstaufruf -->
-  <div id="loginModal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl text-center space-y-4">
-      <div class="text-3xl">🍷</div>
-      <h2 class="font-bold text-lg text-[#6B1D2F]">Willkommen im Heider's Dienstplan</h2>
-      <p class="text-xs text-stone-600">Bitte wähle deinen Namen aus. Deine Auswahl wird für dieses Smartphone gespeichert.</p>
+  <!-- Login Modal -->
+  <div id="loginModal" class="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center space-y-4">
+      <div class="text-4xl">🍷</div>
+      <h2 class="font-bold text-lg text-[#6B1D2F]">Willkommen bei Heider's</h2>
+      <p class="text-xs text-stone-600">Bitte wähle dein Profil aus. Das Smartphone merkt sich deine Auswahl.</p>
       
-      <select id="initialUserSelect" class="w-full p-2.5 border border-stone-300 rounded-xl text-sm font-bold bg-stone-50 focus:outline-none focus:ring-2 focus:ring-[#6B1D2F]">
+      <select id="initialUserSelect" class="w-full p-3 border border-stone-300 rounded-xl text-sm font-bold bg-stone-50 focus:outline-none focus:ring-2 focus:ring-[#6B1D2F]">
       </select>
 
-      <button onclick="confirmUserChoice()" class="w-full py-2.5 bg-[#6B1D2F] text-white rounded-xl font-bold shadow-lg hover:bg-[#521422]">
-        Anmelden & Speichern
+      <button onclick="confirmUserChoice()" class="w-full py-3 bg-[#6B1D2F] text-white rounded-xl font-bold shadow-lg hover:bg-[#521422]">
+        Anmelden
       </button>
     </div>
   </div>
 
-  <!-- Navigation & Tabs -->
-  <div class="max-w-4xl mx-auto px-3 mt-3">
-    <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-3 space-y-3">
-      
-      <div class="flex justify-between items-center">
-        <button onclick="changeWeek(-1)" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-lg font-bold text-xs text-[#6B1D2F]">❮ Zurück</button>
-        <div class="text-center">
-          <span id="weekTitle" class="font-bold text-xs sm:text-sm block text-[#2B2321]">Woche ab Mo...</span>
-          <span id="weekRange" class="text-[10px] sm:text-xs text-stone-500">...</span>
-        </div>
-        <button onclick="changeWeek(1)" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-lg font-bold text-xs text-[#6B1D2F]">Vor ❯</button>
+  <!-- Haupt-Container -->
+  <div class="max-w-md mx-auto px-3 mt-3 space-y-3">
+
+    <!-- Wochen-Navigation -->
+    <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-3 flex justify-between items-center">
+      <button onclick="changeWeek(-1)" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-xl font-bold text-xs text-[#6B1D2F]">❮ Zurück</button>
+      <div class="text-center">
+        <span id="weekTitle" class="font-bold text-xs sm:text-sm block text-[#2B2321]">Woche lädt...</span>
+        <span id="weekRange" class="text-[10px] text-stone-500">...</span>
       </div>
+      <button onclick="changeWeek(1)" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-xl font-bold text-xs text-[#6B1D2F]">Vor ❯</button>
+    </div>
 
-      <!-- Tab Buttons (Standard: Gesamtplan) -->
-      <div class="flex rounded-lg bg-stone-100 p-1 text-xs">
-        <button id="tabFullPlanBtn" onclick="switchTab('fullPlan')" class="flex-1 py-2 rounded-md font-bold btn-active">📅 Gesamtplan</button>
-        <button id="tabMyShiftsBtn" onclick="switchTab('myShifts')" class="flex-1 py-2 rounded-md font-bold btn-inactive">✏️ Meine Schichten</button>
+    <!-- Modus-Umschalter: Tages-Karten vs. Meine Schichten -->
+    <div class="flex rounded-xl bg-stone-200 p-1 text-xs font-bold">
+      <button id="tabFullPlanBtn" onclick="switchTab('fullPlan')" class="flex-1 py-2 rounded-lg btn-active transition-all">📋 Gesamtplan (Karten)</button>
+      <button id="tabMyShiftsBtn" onclick="switchTab('myShifts')" class="flex-1 py-2 rounded-lg btn-inactive transition-all">✏️ Meine Schichten</button>
+    </div>
+
+    <!-- Status Radar / Alarmsystem -->
+    <div id="alarmBanner" class="p-3 rounded-2xl shadow-sm text-xs bg-emerald-50 border border-emerald-200 text-emerald-900">
+      <div class="flex items-center gap-2 font-bold text-sm">
+        <span id="alarmIcon">✅</span>
+        <span id="alarmTitle">Alles optimal besetzt</span>
       </div>
-
+      <div id="alarmMessage" class="text-[11px] mt-1 text-stone-600">Keine offenen Schichten in dieser Woche.</div>
     </div>
-  </div>
 
-  <!-- Alarmsystem Banner -->
-  <div class="max-w-4xl mx-auto px-3 mt-3">
-    <div id="alarmBanner" class="p-3 rounded-xl shadow-sm text-xs bg-emerald-50 border border-emerald-200 text-emerald-900">
-      <span id="alarmTitle" class="font-bold block text-sm">✅ Alles optimal besetzt</span>
-      <span id="alarmMessage">Alle Schichten dieser Woche haben ausreichend Personal.</span>
-    </div>
-  </div>
-
-  <!-- Wochen-Notizfeld -->
-  <div class="max-w-4xl mx-auto px-3 mt-3">
-    <div class="bg-amber-50/80 border border-amber-200 rounded-xl p-3 shadow-sm text-xs space-y-1.5">
+    <!-- Wochennotizen -->
+    <div class="bg-amber-50/90 border border-amber-200 rounded-2xl p-3 text-xs space-y-1.5 shadow-sm">
       <div class="flex justify-between items-center font-bold text-amber-900">
-        <span class="flex items-center gap-1.5">📝 Wochen-Notizen & Hinweise</span>
-        <button id="editNoteBtn" onclick="toggleNoteEdit()" class="text-[10px] text-amber-800 underline">Bearbeiten</button>
+        <span class="flex items-center gap-1.5">📝 Wochen-Hinweise</span>
+        <button onclick="toggleNoteEdit()" class="text-[10px] text-amber-800 underline">Bearbeiten</button>
       </div>
-      <div id="noteDisplay" class="text-amber-950 italic">Keine Notizen für diese Woche.</div>
-      <div id="noteEditBox" class="hidden space-y-2">
-        <textarea id="noteInput" rows="2" class="w-full p-2 border border-amber-300 rounded-lg text-xs focus:outline-none" placeholder="Echtzeit-Notiz eintragen..."></textarea>
-        <button onclick="saveWeekNote()" class="px-3 py-1 bg-[#6B1D2F] text-white rounded font-bold text-[11px]">Speichern</button>
+      <div id="noteDisplay" class="text-amber-950 italic text-[11px]">Keine Notizen.</div>
+      <div id="noteEditBox" class="hidden space-y-2 mt-1">
+        <textarea id="noteInput" rows="2" class="w-full p-2 border border-amber-300 rounded-xl text-xs focus:outline-none bg-white" placeholder="Notiz für das Team..."></textarea>
+        <button onclick="saveWeekNote()" class="px-3 py-1 bg-[#6B1D2F] text-white rounded-lg font-bold text-[10px]">Speichern</button>
       </div>
     </div>
-  </div>
 
-  <!-- Main Content Container -->
-  <main class="max-w-4xl mx-auto px-3 mt-3">
-    
-    <!-- TAB 1: GESAMTPLAN (STANDARDEINSTIEG) -->
+    <!-- TAB 1: GESAMTPLAN (NEUES KARTEN-DESIGN) -->
     <div id="tabFullPlan" class="space-y-3">
-      <div id="adminControls" class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs hidden">
-        <span class="font-bold block text-amber-900 mb-1">👑 Inhaber- & Admin-Steuerung (Nelly & Pia)</span>
-        <button onclick="openSollModal()" class="px-3 py-1.5 bg-[#6B1D2F] text-white rounded font-bold shadow">⚙️ Soll, Events & Reservierungen festlegen</button>
+      <div id="adminControls" class="bg-stone-100 border border-stone-300 rounded-2xl p-3 text-xs hidden flex justify-between items-center">
+        <span class="font-bold text-stone-800">👑 Admin-Steuerung</span>
+        <button onclick="openSollModal()" class="px-3 py-1.5 bg-[#6B1D2F] text-white rounded-xl font-bold shadow text-[11px]">⚙️ Soll & Reservierungen</button>
       </div>
 
-      <div class="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
-        <div class="p-2.5 bg-stone-50 border-b border-stone-200 flex justify-between items-center text-xs">
-          <span class="font-bold text-[#2B2321]">Gesamtübersicht Heider's Weine & Mehr</span>
-          <span class="text-stone-500">Live</span>
-        </div>
-        
-        <div class="overflow-x-auto custom-scrollbar">
-          <table class="w-full text-left text-xs min-w-[760px] sticky-table">
-            <thead>
-              <tr class="bg-[#F5EFEE] text-[#6B1D2F] font-bold border-b border-stone-200" id="tableHeaderRow">
-                <th class="p-2 sticky-col">Mitarbeiter</th>
-              </tr>
-            </thead>
-            <tbody id="fullPlanTableBody" class="divide-y divide-stone-100">
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="bg-white p-2.5 rounded-xl border border-stone-200 text-[11px] flex flex-wrap gap-3 text-stone-600">
-        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block"></span> Service/Theke (se/th)</span>
-        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-600 inline-block"></span> Küche (kü)</span>
-        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block"></span> Springer (S)</span>
-        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span> Rot = Schicht unterbesetzt</span>
+      <div id="dailyCardsContainer" class="space-y-3">
+        <!-- Karten werden dynamisch erzeugt -->
       </div>
     </div>
 
     <!-- TAB 2: MEINE SCHICHTEN -->
     <div id="tabMyShifts" class="hidden space-y-3">
-      <div class="bg-white p-3 rounded-xl border border-stone-200 shadow-sm flex justify-between items-center">
-        <span class="font-bold text-xs sm:text-sm text-[#6B1D2F]">Eingeloggt als: <span id="currentUserDisplay" class="underline">Nelly</span></span>
-        <button onclick="toggleSpecialDays()" id="specialDaysBtn" class="px-2.5 py-1 bg-stone-200 text-stone-700 rounded text-xs font-bold">
+      <div class="bg-white p-3 rounded-2xl border border-stone-200 shadow-sm flex justify-between items-center text-xs">
+        <span class="font-bold text-[#6B1D2F]">Eingeloggt als: <span id="currentUserDisplay" class="underline">Nelly</span></span>
+        <button onclick="toggleSpecialDays()" id="specialDaysBtn" class="px-2.5 py-1 bg-stone-200 text-stone-700 rounded-lg font-bold text-[11px]">
           Mo/So anzeigen
         </button>
       </div>
@@ -191,29 +136,28 @@
       <div id="myShiftsList" class="space-y-3"></div>
     </div>
 
-  </main>
+  </div>
 
-  <!-- Modal for Admin Soll, Events & Reservierungen -->
-  <div id="sollModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 hidden">
-    <div class="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-4 shadow-xl text-xs">
-      <div class="flex justify-between items-center border-b border-stone-200 pb-2 mb-3">
-        <h3 class="font-bold text-[#6B1D2F] text-sm">Soll, Events & Reservierungen</h3>
+  <!-- Modal Admin Settings -->
+  <div id="sollModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full max-h-[85vh] overflow-y-auto p-4 shadow-xl text-xs space-y-3">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-[#6B1D2F] text-sm">Soll-Personal & Reservierungen</h3>
         <button onclick="closeSollModal()" class="text-stone-400 font-bold text-base">✕</button>
       </div>
       <div id="sollModalContent" class="space-y-3"></div>
-      <div class="mt-4 pt-2 border-t border-stone-200 flex justify-end gap-2">
-        <button onclick="closeSollModal()" class="px-3 py-1.5 bg-stone-100 text-stone-700 rounded font-medium">Abbrechen</button>
-        <button onclick="saveSollSettings()" class="px-3 py-1.5 bg-[#6B1D2F] text-white rounded font-bold">Speichern</button>
+      <div class="pt-2 border-t flex justify-end gap-2">
+        <button onclick="closeSollModal()" class="px-3 py-1.5 bg-stone-100 text-stone-700 rounded-xl font-medium">Abbrechen</button>
+        <button onclick="saveSollSettings()" class="px-3 py-1.5 bg-[#6B1D2F] text-white rounded-xl font-bold">Speichern</button>
       </div>
     </div>
   </div>
 
   <script>
-    // Funktion zur Ermittlung des Montags der aktuellen Woche
     function getStartOfCurrentWeek() {
       const d = new Date();
       const day = d.getDay();
-      const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Anpassen falls Sonntag (0)
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
       const monday = new Date(d.setDate(diff));
       monday.setHours(0, 0, 0, 0);
       return monday;
@@ -235,49 +179,14 @@
     ];
 
     let currentUser = localStorage.getItem('heiders_user') || null;
-    let currentWeekStart = getStartOfCurrentWeek(); // DYNAMISCHER EINSTIEG IN DIE AKTUELLE WOCHE
+    let currentWeekStart = getStartOfCurrentWeek();
     let showSpecialDays = false;
     let activeTab = 'fullPlan';
 
-    // Feste Start-Datenbank
-    const seedDB = {
-      "2026-10-05": {
-        "events": { "do": "Lesung - 45 Leute am Abend" },
-        "resTag": {},
-        "resAbend": { "do": "45 Pers. Lesung" },
-        "soll": { "di": {"tag": 2, "abend": 3}, "mi": {"tag": 2, "abend": 3}, "do": {"tag": 2, "abend": 2}, "fr": {"tag": 2, "abend": 3}, "sa": {"tag": 2, "abend": 3} },
-        "note": "Nadja: 06.10. hätte kommen sollen, stand im Plan ist nicht gekommen · Valeria kann auch küche machen",
-        "shifts": {
-          "Max": { "di": {"tag": "-", "abend": "se"}, "mi": {"tag": "-", "abend": "th"}, "fr": {"tag": "-", "abend": "se"}, "sa": {"tag": "-", "abend": "u"} },
-          "Patricia": { "di": {"tag": "se", "abend": "-"}, "mi": {"tag": "th", "abend": "-"}, "do": {"tag": "kü", "abend": "-"}, "fr": {"tag": "kü", "abend": "-"} },
-          "Tina": { "do": {"abend": "th"}, "sa": {"abend": "se 15"} },
-          "Valeria": { "do": {"abend": "kü"}, "sa": {"abend": "th"} },
-          "Esther": { "mi": {"abend": "kü"}, "do": {"abend": "se"}, "fr": {"abend": "th"} },
-          "Pia": { "di": {"tag": "kü", "abend": "kü"}, "mi": {"tag": "kü", "abend": "se"}, "do": {"tag": "th", "abend": "se"}, "fr": {"tag": "se", "abend": "kü"}, "sa": {"tag": "kü", "abend": "kü"} }
-        }
-      },
-      "2026-10-12": {
-        "events": { "sa": "34 Leute Geschlossene & 10 separat" },
-        "resTag": {},
-        "resAbend": { "sa": "34p Geschlossene + 10p" },
-        "soll": { "di": {"tag": 2, "abend": 3}, "mi": {"tag": 2, "abend": 2}, "do": {"tag": 2, "abend": 2}, "fr": {"tag": 2, "abend": 3}, "sa": {"tag": 2, "abend": 3} },
-        "note": "Di Abend: Nadja ab 17h · Fr Tag: Patricia 11-15h",
-        "shifts": {
-          "Max": { "di": {"abend": "th"}, "fr": {"abend": "th"}, "sa": {"abend": "th"} },
-          "Patricia": { "di": {"tag": "kü"}, "mi": {"tag": "kü"}, "do": {"tag": "th"}, "fr": {"tag": "Kü 11–15"} },
-          "Martina": { "mi": {"tag": "u"}, "do": {"tag": "u"}, "fr": {"tag": "u"} },
-          "Tina": { "sa": {"abend": "th"} },
-          "Nadja": { "di": {"abend": "se (ab 17h)"} },
-          "Valeria": { "sa": {"abend": "se"} },
-          "Pia": { "di": {"tag": "x", "abend": "kü"}, "mi": {"tag": "kü", "abend": "x"}, "do": {"tag": "x", "abend": "x"}, "fr": {"tag": "x", "abend": "kü"}, "sa": {"tag": "kü", "abend": "kü"} }
-        }
-      }
-    };
-
     let db = {};
     try {
-      db = JSON.parse(localStorage.getItem('heiders_dienstplan_db')) || seedDB;
-    } catch(e) { db = seedDB; }
+      db = JSON.parse(localStorage.getItem('heiders_dienstplan_db')) || {};
+    } catch(e) { db = {}; }
 
     const daysOfWeek = [
       { key: 'mo', label: 'Montag', isSpecial: true },
@@ -297,6 +206,12 @@
     ];
 
     function init() {
+      // Base64 Logo Integration
+      const logoImg = document.getElementById('appLogo');
+      if (logoImg) {
+        logoImg.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAYAAAD0eNT6AAAgAElEQVR4nO3df3xU1b3///8";
+      }
+
       if (!currentUser) {
         showLoginModal();
       } else {
@@ -314,8 +229,7 @@
     }
 
     function confirmUserChoice() {
-      const selected = document.getElementById('initialUserSelect').value;
-      currentUser = selected;
+      currentUser = document.getElementById('initialUserSelect').value;
       localStorage.setItem('heiders_user', currentUser);
       document.getElementById('loginModal').classList.add('hidden');
       setupUserInterface();
@@ -374,7 +288,7 @@
       const weekKey = getWeekKey(currentWeekStart);
       if (!db[weekKey]) {
         db[weekKey] = {
-          events: { di: '', mi: '', do: '', fr: '', sa: '', mo: '', so: '' },
+          events: {},
           resTag: {},
           resAbend: {},
           soll: {
@@ -418,9 +332,6 @@
     function toggleSpecialDays() {
       showSpecialDays = !showSpecialDays;
       document.getElementById('specialDaysBtn').innerText = showSpecialDays ? 'Mo/So eingeblendet' : 'Mo/So anzeigen';
-      document.getElementById('specialDaysBtn').className = showSpecialDays 
-        ? 'px-2.5 py-1 bg-[#6B1D2F] text-white rounded text-xs font-bold'
-        : 'px-2.5 py-1 bg-stone-200 text-stone-700 rounded text-xs font-bold';
       renderApp();
     }
 
@@ -429,13 +340,13 @@
       if (tab === 'fullPlan') {
         document.getElementById('tabFullPlan').classList.remove('hidden');
         document.getElementById('tabMyShifts').classList.add('hidden');
-        document.getElementById('tabFullPlanBtn').className = 'flex-1 py-2 rounded-md font-bold btn-active';
-        document.getElementById('tabMyShiftsBtn').className = 'flex-1 py-2 rounded-md font-bold btn-inactive';
+        document.getElementById('tabFullPlanBtn').className = 'flex-1 py-2 rounded-lg btn-active';
+        document.getElementById('tabMyShiftsBtn').className = 'flex-1 py-2 rounded-lg btn-inactive';
       } else {
         document.getElementById('tabMyShifts').classList.remove('hidden');
         document.getElementById('tabFullPlan').classList.add('hidden');
-        document.getElementById('tabMyShiftsBtn').className = 'flex-1 py-2 rounded-md font-bold btn-active';
-        document.getElementById('tabFullPlanBtn').className = 'flex-1 py-2 rounded-md font-bold btn-inactive';
+        document.getElementById('tabMyShiftsBtn').className = 'flex-1 py-2 rounded-lg btn-active';
+        document.getElementById('tabFullPlanBtn').className = 'flex-1 py-2 rounded-lg btn-inactive';
       }
     }
 
@@ -452,9 +363,7 @@
 
     function saveWeekNote() {
       const weekKey = getWeekKey(currentWeekStart);
-      const text = document.getElementById('noteInput').value;
-      if (!db[weekKey]) db[weekKey] = {};
-      db[weekKey].note = text;
+      db[weekKey].note = document.getElementById('noteInput').value;
       saveDB();
       document.getElementById('noteEditBox').classList.add('hidden');
       renderApp();
@@ -468,12 +377,11 @@
       document.getElementById('weekTitle').innerText = `Woche ab Mo, ${formatDateShort(currentWeekStart)}.`;
       document.getElementById('weekRange').innerText = `${formatDateShort(currentWeekStart)} – ${formatDateShort(weekEnd)}.${weekEnd.getFullYear()}`;
 
-      const noteText = db[weekKey]?.note;
-      document.getElementById('noteDisplay').innerText = noteText ? noteText : 'Keine Notizen für diese Woche.';
+      document.getElementById('noteDisplay').innerText = db[weekKey]?.note || 'Keine Notizen für diese Woche.';
 
       checkAlarmsAndCapacities();
       renderMyShiftsTab();
-      renderFullPlanTab();
+      renderFullPlanTabCards();
     }
 
     function checkAlarmsAndCapacities() {
@@ -483,51 +391,136 @@
 
       daysOfWeek.forEach((dayObj, index) => {
         if (dayObj.isSpecial && !showSpecialDays) return;
-
         const dayKey = dayObj.key;
         const dateStr = formatDateShort(getDateForDay(index));
         const soll = weekData.soll[dayKey] || { tag: 0, abend: 0 };
 
         ['tag', 'abend'].forEach(schicht => {
-          const shiftName = schicht === 'tag' ? 'Tag' : 'Abend';
           const reqSoll = soll[schicht] || 0;
           if (reqSoll === 0) return;
 
-          let countDa = 0;
-          let hasKitchen = false;
-
+          let countDa = 0, hasKitchen = false;
           team.forEach(m => {
-            const shiftVal = weekData.shifts[m.name]?.[dayKey]?.[schicht] || '-';
-            if (shiftVal !== '-' && !['u', 'k', 'f', 'urlaub', 'krank', 'frei'].includes(shiftVal.toLowerCase())) {
-              countDa++;
-            }
-            if (shiftVal.toLowerCase().includes('kü')) {
-              hasKitchen = true;
-            }
+            const val = weekData.shifts[m.name]?.[dayKey]?.[schicht] || '-';
+            if (val !== '-' && !['u', 'k', 'f'].includes(val.toLowerCase())) countDa++;
+            if (val.toLowerCase().includes('kü')) hasKitchen = true;
           });
 
-          if (countDa < reqSoll) {
-            issues.push(`${dayObj.label} (${dateStr}) ${shiftName}: Zu wenig Personal (${countDa}/${reqSoll})`);
-          }
-          if (!hasKitchen && reqSoll > 0) {
-            issues.push(`${dayObj.label} (${dateStr}) ${shiftName}: Keine Küche besetzt!`);
-          }
+          if (countDa < reqSoll) issues.push(`${dayObj.label} ${schicht.toUpperCase()}: ${countDa}/${reqSoll} Personal`);
+          if (!hasKitchen && reqSoll > 0) issues.push(`${dayObj.label} ${schicht.toUpperCase()}: Keine Küche!`);
         });
       });
 
       const banner = document.getElementById('alarmBanner');
-      const title = document.getElementById('alarmTitle');
-      const message = document.getElementById('alarmMessage');
-
       if (issues.length === 0) {
-        banner.className = "p-3 rounded-xl shadow-sm text-xs bg-emerald-50 border border-emerald-200 text-emerald-900";
-        title.innerText = "✅ Alles optimal besetzt";
-        message.innerText = "Alle Schichten erfüllen das vorgegebene Personal-Soll und Küchenpersonal.";
+        banner.className = "p-3 rounded-2xl shadow-sm text-xs bg-emerald-50 border border-emerald-200 text-emerald-900";
+        document.getElementById('alarmIcon').innerText = "✅";
+        document.getElementById('alarmTitle').innerText = "Alles optimal besetzt";
+        document.getElementById('alarmMessage').innerText = "Alle Schichten haben ausreichend Personal und Küche.";
       } else {
-        banner.className = "p-3 rounded-xl shadow-sm text-xs bg-amber-50 border border-amber-300 text-amber-900";
-        title.innerText = `🚨 ALARMSYSTEM: ${issues.length} Engpass-Warnung(en)`;
-        message.innerHTML = issues.map(i => `<span class="block">• ${i}</span>`).join('');
+        banner.className = "p-3 rounded-2xl shadow-sm text-xs bg-red-50 border border-red-200 text-red-900";
+        document.getElementById('alarmIcon').innerText = "⚠️";
+        document.getElementById('alarmTitle').innerText = `${issues.length} Offene Stelle(n)`;
+        document.getElementById('alarmMessage').innerHTML = issues.map(i => `• ${i}`).join('<br>');
       }
+    }
+
+    /* NEUES GASTRO-KARTEN-DESIGN FÜR DEN GESAMTPLAN */
+    function renderFullPlanTabCards() {
+      const weekKey = getWeekKey(currentWeekStart);
+      const weekData = db[weekKey];
+      const container = document.getElementById('dailyCardsContainer');
+      container.innerHTML = '';
+
+      daysOfWeek.forEach((dayObj, index) => {
+        if (dayObj.isSpecial && !showSpecialDays) return;
+        const dayKey = dayObj.key;
+        const dateObj = getDateForDay(index);
+        const dateFormatted = `${dayObj.label}, ${formatDateShort(dateObj)}.`;
+        const soll = weekData.soll[dayKey] || { tag: 0, abend: 0 };
+        const resT = weekData.resTag?.[dayKey] || '';
+        const resA = weekData.resAbend?.[dayKey] || '';
+
+        // Auswertung wer eingeteilt ist
+        let staffTag = [], staffAbend = [];
+        team.forEach(m => {
+          const st = weekData.shifts[m.name]?.[dayKey]?.tag || '-';
+          const sa = weekData.shifts[m.name]?.[dayKey]?.abend || '-';
+          const timeT = weekData.shifts[m.name]?.[dayKey]?.timeTag;
+          const timeA = weekData.shifts[m.name]?.[dayKey]?.timeAbend;
+
+          if (st !== '-') staffTag.push({ name: m.name, role: st, time: timeT });
+          if (sa !== '-') staffAbend.push({ name: m.name, role: sa, time: timeA });
+        });
+
+        const card = document.createElement('div');
+        card.className = "bg-white border border-stone-200 rounded-2xl p-3.5 shadow-sm space-y-3";
+
+        card.innerHTML = `
+          <div class="flex justify-between items-center border-b pb-2 border-stone-100">
+            <div>
+              <h3 class="font-bold text-[#2B2321] text-sm">${dateFormatted}</h3>
+              ${(resT || resA) ? `<div class="text-[10px] text-purple-800 font-medium">📌 Res: ${[resT, resA].filter(Boolean).join(' · ')}</div>` : ''}
+            </div>
+            <span class="text-[10px] font-bold px-2 py-0.5 bg-stone-100 rounded-full text-stone-600">${dayObj.isSpecial ? 'Event' : 'Regulär'}</span>
+          </div>
+
+          <div class="space-y-2.5">
+            <!-- Tagesschicht Block -->
+            <div class="bg-stone-50 rounded-xl p-2.5 border border-stone-200/70">
+              <div class="flex justify-between items-center mb-1.5">
+                <span class="font-bold text-xs text-[#6B1D2F] flex items-center gap-1">☀️ Tagesschicht (ab 10:30)</span>
+                <span class="text-[10px] font-bold ${staffTag.length < soll.tag ? 'text-red-600' : 'text-emerald-700'}">${staffTag.length} von ${soll.tag} Besetzt</span>
+              </div>
+              <div class="flex flex-wrap gap-1.5 mb-2">
+                ${staffTag.map(s => `
+                  <span class="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg font-bold ${s.role.toLowerCase().includes('kü') ? 'badge-kü' : 'badge-se'}">
+                    ${s.name} (${s.role})${s.time && s.time !== 'Standard (regulär)' ? `<span class="opacity-75 text-[9px]">${s.time.replace('ab ','')}</span>` : ''}
+                  </span>
+                `).join('')}
+                ${staffTag.length === 0 ? '<span class="text-[11px] text-stone-400 italic">Noch niemand eingetragen</span>' : ''}
+              </div>
+              <button onclick="quickClaim('${dayKey}', 'tag')" class="w-full py-1 bg-white hover:bg-stone-100 border border-stone-300 rounded-lg text-[10px] font-bold text-stone-700 shadow-sm">
+                + Mich für Tagesschicht eintragen
+              </button>
+            </div>
+
+            <!-- Abendschicht Block -->
+            <div class="bg-stone-50 rounded-xl p-2.5 border border-stone-200/70">
+              <div class="flex justify-between items-center mb-1.5">
+                <span class="font-bold text-xs text-[#6B1D2F] flex items-center gap-1">🌙 Abendschicht (ab 15:00)</span>
+                <span class="text-[10px] font-bold ${staffAbend.length < soll.abend ? 'text-red-600' : 'text-emerald-700'}">${staffAbend.length} von ${soll.abend} Besetzt</span>
+              </div>
+              <div class="flex flex-wrap gap-1.5 mb-2">
+                ${staffAbend.map(s => `
+                  <span class="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg font-bold ${s.role.toLowerCase().includes('kü') ? 'badge-kü' : 'badge-se'}">
+                    ${s.name} (${s.role})${s.time && s.time !== 'Standard (regulär)' ? `<span class="opacity-75 text-[9px]">${s.time.replace('ab ','')}</span>` : ''}
+                  </span>
+                `).join('')}
+                ${staffAbend.length === 0 ? '<span class="text-[11px] text-stone-400 italic">Noch niemand eingetragen</span>' : ''}
+              </div>
+              <button onclick="quickClaim('${dayKey}', 'abend')" class="w-full py-1 bg-white hover:bg-stone-100 border border-stone-300 rounded-lg text-[10px] font-bold text-stone-700 shadow-sm">
+                + Mich für Abendschicht eintragen
+              </button>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function quickClaim(dayKey, shiftType) {
+      const weekKey = getWeekKey(currentWeekStart);
+      const userObj = team.find(t => t.name === currentUser);
+      let roleCode = 'se';
+      if (userObj.role.includes('Küche') && !userObj.role.includes('Service')) roleCode = 'kü';
+
+      if (!db[weekKey].shifts[currentUser]) db[weekKey].shifts[currentUser] = {};
+      if (!db[weekKey].shifts[currentUser][dayKey]) db[weekKey].shifts[currentUser][dayKey] = { tag: '-', abend: '-' };
+
+      db[weekKey].shifts[currentUser][dayKey][shiftType] = roleCode;
+      saveDB();
+      renderApp();
     }
 
     function renderMyShiftsTab() {
@@ -538,92 +531,33 @@
 
       daysOfWeek.forEach((dayObj, index) => {
         if (dayObj.isSpecial && !showSpecialDays) return;
-
         const dayKey = dayObj.key;
         const dateObj = getDateForDay(index);
         const dateFormatted = `${dayObj.label}, ${formatDateShort(dateObj)}.`;
-        const eventText = weekData.events[dayKey];
-        const resT = weekData.resTag?.[dayKey] || '';
-        const resA = weekData.resAbend?.[dayKey] || '';
         const userShifts = weekData.shifts[currentUser]?.[dayKey] || { tag: '-', abend: '-', timeTag: '', timeAbend: '' };
 
         const card = document.createElement('div');
-        card.className = "bg-white border border-stone-200 rounded-xl p-3 shadow-sm space-y-2.5";
+        card.className = "bg-white border border-stone-200 rounded-2xl p-3 shadow-sm space-y-2";
 
         card.innerHTML = `
-          <div class="flex justify-between items-center border-b border-stone-100 pb-2">
-            <div>
-              <h3 class="font-bold text-[#2B2321] text-xs sm:text-sm">${dateFormatted}</h3>
-              ${eventText ? `<span class="inline-block px-2 py-0.5 bg-blue-50 text-blue-800 rounded text-[10px] font-medium mt-0.5">⭐ ${eventText}</span>` : ''}
-            </div>
-            <span class="text-[10px] font-semibold px-2 py-0.5 bg-stone-100 rounded text-stone-600">${dayObj.isSpecial ? 'Event-Tag' : 'Regulär'}</span>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            <!-- Tagesschicht -->
-            <div class="bg-stone-50 p-2.5 rounded-lg border border-stone-200/80">
-              <div class="flex justify-between items-center mb-1">
-                <span class="font-bold text-xs text-[#6B1D2F]">☀️ Tag (ab 10:30)</span>
-                <span class="text-[10px] text-stone-500">Soll: ${weekData.soll[dayKey]?.tag || 0}</span>
+          <div class="font-bold text-[#2B2321] text-xs border-b pb-1.5 border-stone-100">${dateFormatted}</div>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="bg-stone-50 p-2 rounded-xl border border-stone-200 text-[11px]">
+              <span class="font-bold block text-[#6B1D2F] mb-1">☀️ Tag</span>
+              <div class="grid grid-cols-2 gap-1 mb-1.5">
+                <button onclick="updateShift('${dayKey}', 'tag', 'se')" class="py-1 rounded font-bold ${userShifts.tag === 'se' ? 'bg-emerald-600 text-white' : 'bg-white border'}">Service</button>
+                <button onclick="updateShift('${dayKey}', 'tag', 'kü')" class="py-1 rounded font-bold ${userShifts.tag === 'kü' ? 'bg-amber-600 text-white' : 'bg-white border'}">Küche</button>
               </div>
-              ${resT ? `<div class="text-[10px] text-purple-800 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200 font-medium mb-1.5">📌 Res: ${resT}</div>` : ''}
-              
-              <div class="grid grid-cols-2 gap-1 mb-2">
-                <button onclick="updateShift('${dayKey}', 'tag', 'se')" class="py-1 px-1 rounded text-[11px] font-bold border ${['se','x','th'].includes(userShifts.tag.toLowerCase()) ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-stone-700 border-stone-300'}">
-                  Service/Theke
-                </button>
-                <button onclick="updateShift('${dayKey}', 'tag', 'kü')" class="py-1 px-1 rounded text-[11px] font-bold border ${userShifts.tag.toLowerCase().includes('kü') ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-stone-700 border-stone-300'}">
-                  Küche
-                </button>
-                <button onclick="updateShift('${dayKey}', 'tag', 'Springer')" class="py-1 px-1 rounded text-[11px] font-bold border ${userShifts.tag === 'Springer' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-stone-700 border-stone-300'}">
-                  Springer
-                </button>
-                <button onclick="updateShift('${dayKey}', 'tag', '-')" class="py-1 px-1 rounded text-[11px] font-bold border ${userShifts.tag === '-' ? 'bg-stone-400 text-white border-stone-400' : 'bg-white text-stone-700 border-stone-300'}">
-                  Nicht da
-                </button>
-              </div>
-
-              ${userShifts.tag !== '-' ? `
-                <div>
-                  <label class="text-[9px] text-stone-500 block mb-0.5">Arbeitszeit / Ab Uhrzeit:</label>
-                  <select onchange="updateShiftTime('${dayKey}', 'tag', this.value)" class="w-full text-xs p-1 bg-white border border-stone-300 rounded focus:outline-none">
-                    ${timeOptions.map(t => `<option value="${t}" ${userShifts.timeTag === t ? 'selected' : ''}>${t}</option>`).join('')}
-                  </select>
-                </div>
-              ` : ''}
+              <button onclick="updateShift('${dayKey}', 'tag', '-')" class="w-full py-0.5 rounded text-[10px] ${userShifts.tag === '-' ? 'bg-stone-300' : 'bg-white border'}">Frei</button>
             </div>
 
-            <!-- Abendschicht -->
-            <div class="bg-stone-50 p-2.5 rounded-lg border border-stone-200/80">
-              <div class="flex justify-between items-center mb-1">
-                <span class="font-bold text-xs text-[#6B1D2F]">🌙 Abend (ab 15:00)</span>
-                <span class="text-[10px] text-stone-500">Soll: ${weekData.soll[dayKey]?.abend || 0}</span>
+            <div class="bg-stone-50 p-2 rounded-xl border border-stone-200 text-[11px]">
+              <span class="font-bold block text-[#6B1D2F] mb-1">🌙 Abend</span>
+              <div class="grid grid-cols-2 gap-1 mb-1.5">
+                <button onclick="updateShift('${dayKey}', 'abend', 'se')" class="py-1 rounded font-bold ${userShifts.abend === 'se' ? 'bg-emerald-600 text-white' : 'bg-white border'}">Service</button>
+                <button onclick="updateShift('${dayKey}', 'abend', 'kü')" class="py-1 rounded font-bold ${userShifts.abend === 'kü' ? 'bg-amber-600 text-white' : 'bg-white border'}">Küche</button>
               </div>
-              ${resA ? `<div class="text-[10px] text-purple-800 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200 font-medium mb-1.5">📌 Res: ${resA}</div>` : ''}
-              
-              <div class="grid grid-cols-2 gap-1 mb-2">
-                <button onclick="updateShift('${dayKey}', 'abend', 'se')" class="py-1 px-1 rounded text-[11px] font-bold border ${['se','x','th'].includes(userShifts.abend.toLowerCase()) ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-stone-700 border-stone-300'}">
-                  Service/Theke
-                </button>
-                <button onclick="updateShift('${dayKey}', 'abend', 'kü')" class="py-1 px-1 rounded text-[11px] font-bold border ${userShifts.abend.toLowerCase().includes('kü') ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-stone-700 border-stone-300'}">
-                  Küche
-                </button>
-                <button onclick="updateShift('${dayKey}', 'abend', 'Springer')" class="py-1 px-1 rounded text-[11px] font-bold border ${userShifts.abend === 'Springer' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-stone-700 border-stone-300'}">
-                  Springer
-                </button>
-                <button onclick="updateShift('${dayKey}', 'abend', '-')" class="py-1 px-1 rounded text-[11px] font-bold border ${userShifts.abend === '-' ? 'bg-stone-400 text-white border-stone-400' : 'bg-white text-stone-700 border-stone-300'}">
-                  Nicht da
-                </button>
-              </div>
-
-              ${userShifts.abend !== '-' ? `
-                <div>
-                  <label class="text-[9px] text-stone-500 block mb-0.5">Arbeitszeit / Ab Uhrzeit:</label>
-                  <select onchange="updateShiftTime('${dayKey}', 'abend', this.value)" class="w-full text-xs p-1 bg-white border border-stone-300 rounded focus:outline-none">
-                    ${timeOptions.map(t => `<option value="${t}" ${userShifts.timeAbend === t ? 'selected' : ''}>${t}</option>`).join('')}
-                  </select>
-                </div>
-              ` : ''}
+              <button onclick="updateShift('${dayKey}', 'abend', '-')" class="w-full py-0.5 rounded text-[10px] ${userShifts.abend === '-' ? 'bg-stone-300' : 'bg-white border'}">Frei</button>
             </div>
           </div>
         `;
@@ -633,126 +567,11 @@
 
     function updateShift(dayKey, shiftType, val) {
       const weekKey = getWeekKey(currentWeekStart);
-      if (!db[weekKey].shifts[currentUser]) {
-        db[weekKey].shifts[currentUser] = {};
-      }
-      if (!db[weekKey].shifts[currentUser][dayKey]) {
-        db[weekKey].shifts[currentUser][dayKey] = { tag: '-', abend: '-', timeTag: '', timeAbend: '' };
-      }
+      if (!db[weekKey].shifts[currentUser]) db[weekKey].shifts[currentUser] = {};
+      if (!db[weekKey].shifts[currentUser][dayKey]) db[weekKey].shifts[currentUser][dayKey] = { tag: '-', abend: '-' };
       db[weekKey].shifts[currentUser][dayKey][shiftType] = val;
       saveDB();
       renderApp();
-    }
-
-    function updateShiftTime(dayKey, shiftType, timeVal) {
-      const weekKey = getWeekKey(currentWeekStart);
-      const key = shiftType === 'tag' ? 'timeTag' : 'timeAbend';
-      db[weekKey].shifts[currentUser][dayKey][key] = timeVal;
-      saveDB();
-      renderApp();
-    }
-
-    function renderFullPlanTab() {
-      const weekKey = getWeekKey(currentWeekStart);
-      const weekData = db[weekKey];
-
-      const headerRow = document.getElementById('tableHeaderRow');
-      headerRow.innerHTML = `<th class="p-2 sticky-col">Mitarbeiter</th>`;
-
-      daysOfWeek.forEach((dayObj, index) => {
-        if (dayObj.isSpecial && !showSpecialDays) return;
-        const dateStr = formatDateShort(getDateForDay(index));
-        const dayKey = dayObj.key;
-        const soll = weekData.soll[dayKey] || { tag: 0, abend: 0 };
-        const resT = weekData.resTag?.[dayKey] || '';
-        const resA = weekData.resAbend?.[dayKey] || '';
-
-        let countTag = 0, kitchenTag = false;
-        let countAbend = 0, kitchenAbend = false;
-
-        team.forEach(m => {
-          const vt = weekData.shifts[m.name]?.[dayKey]?.tag || '-';
-          const va = weekData.shifts[m.name]?.[dayKey]?.abend || '-';
-
-          if (vt !== '-' && !['u', 'k', 'f'].includes(vt.toLowerCase())) countTag++;
-          if (vt.toLowerCase().includes('kü')) kitchenTag = true;
-
-          if (va !== '-' && !['u', 'k', 'f'].includes(va.toLowerCase())) countAbend++;
-          if (va.toLowerCase().includes('kü')) kitchenAbend = true;
-        });
-
-        const tagIssue = countTag < (soll.tag || 0) || (!kitchenTag && (soll.tag || 0) > 0);
-        const abendIssue = countAbend < (soll.abend || 0) || (!kitchenAbend && (soll.abend || 0) > 0);
-
-        headerRow.innerHTML += `
-          <th class="p-1.5 text-center border-r border-stone-200 min-w-[95px] align-top">
-            <div class="font-bold text-xs">${dayObj.label}</div>
-            <div class="text-[10px] text-stone-500 mb-1">${dateStr}</div>
-            <div class="grid grid-cols-2 gap-0.5 text-[9px] font-bold mb-1">
-              <span class="p-0.5 rounded ${tagIssue ? 'bg-red-500 text-white' : 'bg-stone-100 text-stone-700'}">T:${soll.tag}</span>
-              <span class="p-0.5 rounded ${abendIssue ? 'bg-red-500 text-white' : 'bg-stone-100 text-stone-700'}">A:${soll.abend}</span>
-            </div>
-            ${(resT || resA) ? `
-              <div class="text-[8px] bg-purple-50 text-purple-900 border border-purple-200 rounded p-0.5 font-normal leading-tight">
-                ${resT ? `<span class="block font-medium truncate">T: ${resT}</span>` : ''}
-                ${resA ? `<span class="block font-medium truncate">A: ${resA}</span>` : ''}
-              </div>
-            ` : ''}
-          </th>
-        `;
-      });
-
-      const tbody = document.getElementById('fullPlanTableBody');
-      tbody.innerHTML = '';
-
-      team.forEach(m => {
-        const tr = document.createElement('tr');
-        const isCurrent = m.name === currentUser;
-        tr.className = isCurrent ? 'user-highlight font-medium' : 'hover:bg-stone-50';
-
-        let nameTd = `<td class="p-2 sticky-col align-middle">
-          <div class="flex flex-col">
-            <span class="font-bold text-[#2B2321] text-xs">${m.name}</span>
-            <span class="text-[9px] text-stone-500 font-normal leading-tight">${m.role}</span>
-          </div>
-        </td>`;
-
-        let daysTds = '';
-        daysOfWeek.forEach((dayObj) => {
-          if (dayObj.isSpecial && !showSpecialDays) return;
-          const userDay = weekData.shifts[m.name]?.[dayObj.key] || { tag: '-', abend: '-' };
-
-          const formatShiftCell = (val, time) => {
-            let badge = `<span class="text-stone-300">-</span>`;
-            const vLower = val.toLowerCase();
-
-            if (['x', 'se', 'th'].includes(vLower)) {
-              badge = `<span class="px-1 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold text-[10px]">${val}</span>`;
-            } else if (vLower.includes('kü')) {
-              badge = `<span class="px-1 py-0.5 bg-amber-100 text-amber-900 rounded font-bold text-[10px]">${val}</span>`;
-            } else if (vLower === 'springer') {
-              badge = `<span class="px-1 py-0.5 bg-blue-100 text-blue-800 rounded text-[9px]">S</span>`;
-            } else if (val !== '-') {
-              badge = `<span class="px-1 py-0.5 bg-stone-200 text-stone-800 rounded text-[9px] font-bold">${val}</span>`;
-            }
-            
-            const timeHint = (time && time !== 'Standard (regulär)') ? `<span class="block text-[8px] text-stone-500 leading-none mt-0.5">${time.replace('ab ', '')}</span>` : '';
-            return `<div class="text-center">${badge}${timeHint}</div>`;
-          };
-
-          daysTds += `
-            <td class="p-1.5 border-r border-stone-200 align-middle">
-              <div class="grid grid-cols-2 gap-0.5 text-xs">
-                ${formatShiftCell(userDay.tag, userDay.timeTag)}
-                ${formatShiftCell(userDay.abend, userDay.timeAbend)}
-              </div>
-            </td>
-          `;
-        });
-
-        tr.innerHTML = nameTd + daysTds;
-        tbody.appendChild(tr);
-      });
     }
 
     function openSollModal() {
@@ -761,45 +580,27 @@
       const container = document.getElementById('sollModalContent');
       container.innerHTML = '';
 
-      if (!weekData.resTag) weekData.resTag = {};
-      if (!weekData.resAbend) weekData.resAbend = {};
-
       daysOfWeek.forEach((dayObj, index) => {
         const dayKey = dayObj.key;
         const dateStr = formatDateShort(getDateForDay(index));
         const soll = weekData.soll[dayKey] || { tag: 0, abend: 0 };
-        const resT = weekData.resTag[dayKey] || '';
-        const resA = weekData.resAbend[dayKey] || '';
+        const resT = weekData.resTag?.[dayKey] || '';
+        const resA = weekData.resAbend?.[dayKey] || '';
 
         container.innerHTML += `
-          <div class="p-2.5 bg-stone-50 rounded border border-stone-200 space-y-2">
-            <div class="font-bold text-[#2B2321] text-xs">${dayObj.label}, ${dateStr}</div>
-            
+          <div class="p-2.5 bg-stone-50 rounded-xl border border-stone-200 space-y-1.5">
+            <div class="font-bold text-[#2B2321]">${dayObj.label}, ${dateStr}</div>
             <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="block text-[9px] text-stone-500 font-bold">Soll Tag:</label>
-                <input type="number" id="soll_${dayKey}_tag" value="${soll.tag}" min="0" class="w-full p-1 border rounded text-xs">
-              </div>
-              <div>
-                <label class="block text-[9px] text-stone-500 font-bold">Soll Abend:</label>
-                <input type="number" id="soll_${dayKey}_abend" value="${soll.abend}" min="0" class="w-full p-1 border rounded text-xs">
-              </div>
+              <input type="number" id="soll_${dayKey}_tag" value="${soll.tag}" min="0" placeholder="Soll Tag" class="p-1 border rounded">
+              <input type="number" id="soll_${dayKey}_abend" value="${soll.abend}" min="0" placeholder="Soll Abend" class="p-1 border rounded">
             </div>
-
             <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="block text-[9px] text-purple-900 font-bold">📌 Res. Tag:</label>
-                <input type="text" id="res_${dayKey}_tag" value="${resT}" placeholder="z.B. 15 Pers. Mittags" class="w-full p-1 border rounded text-xs">
-              </div>
-              <div>
-                <label class="block text-[9px] text-purple-900 font-bold">📌 Res. Abend:</label>
-                <input type="text" id="res_${dayKey}_abend" value="${resA}" placeholder="z.B. 45 Pers. Lesung" class="w-full p-1 border rounded text-xs">
-              </div>
+              <input type="text" id="res_${dayKey}_tag" value="${resT}" placeholder="Res. Tag" class="p-1 border rounded">
+              <input type="text" id="res_${dayKey}_abend" value="${resA}" placeholder="Res. Abend" class="p-1 border rounded">
             </div>
           </div>
         `;
       });
-
       document.getElementById('sollModal').classList.remove('hidden');
     }
 
@@ -809,21 +610,15 @@
 
     function saveSollSettings() {
       const weekKey = getWeekKey(currentWeekStart);
-      if (!db[weekKey].resTag) db[weekKey].resTag = {};
-      if (!db[weekKey].resAbend) db[weekKey].resAbend = {};
-
       daysOfWeek.forEach(dayObj => {
         const dayKey = dayObj.key;
-        const tagVal = parseInt(document.getElementById(`soll_${dayKey}_tag`).value) || 0;
-        const abendVal = parseInt(document.getElementById(`soll_${dayKey}_abend`).value) || 0;
-        const resTVal = document.getElementById(`res_${dayKey}_tag`).value;
-        const resAVal = document.getElementById(`res_${dayKey}_abend`).value;
-
-        db[weekKey].soll[dayKey] = { tag: tagVal, abend: abendVal };
-        db[weekKey].resTag[dayKey] = resTVal;
-        db[weekKey].resAbend[dayKey] = resAVal;
+        db[weekKey].soll[dayKey] = {
+          tag: parseInt(document.getElementById(`soll_${dayKey}_tag`).value) || 0,
+          abend: parseInt(document.getElementById(`soll_${dayKey}_abend`).value) || 0
+        };
+        db[weekKey].resTag[dayKey] = document.getElementById(`res_${dayKey}_tag`).value;
+        db[weekKey].resAbend[dayKey] = document.getElementById(`res_${dayKey}_abend`).value;
       });
-
       saveDB();
       closeSollModal();
       renderApp();
