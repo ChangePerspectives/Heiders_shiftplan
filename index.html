@@ -2,8 +2,14 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Heider's Weine & Mehr · Dienstplan</title>
+  
+  <!-- PWA App Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Heider's Plan">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { background-color: #FDFBF7; color: #2B2321; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -13,7 +19,14 @@
     .custom-scrollbar::-webkit-scrollbar-track { background: #F5EFEE; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #C5A059; border-radius: 3px; }
     
-    /* Perfekte Fixierung der Mitarbeiter-Spalte beim Scrollen */
+    /* Header Fix gegen Überlappung beim vertikalen Scrollen */
+    header.app-header {
+      position: sticky;
+      top: 0;
+      z-index: 50 !important;
+    }
+
+    /* Sticky Tabellenspalte */
     table.sticky-table {
       border-collapse: separate !important;
       border-spacing: 0 !important;
@@ -23,15 +36,15 @@
       position: sticky !important;
       left: 0 !important;
       background-color: #FFFFFF !important;
-      z-index: 20 !important;
+      z-index: 10 !important;
       min-width: 130px !important;
       max-width: 140px !important;
       border-right: 2px solid #D1D5DB !important;
-      box-shadow: 3px 0 6px -2px rgba(0, 0, 0, 0.15);
+      box-shadow: 2px 0 4px -1px rgba(0, 0, 0, 0.12);
     }
     th.sticky-col {
       background-color: #F5EFEE !important;
-      z-index: 30 !important;
+      z-index: 15 !important;
     }
     tr.user-highlight .sticky-col {
       background-color: #FEF3C7 !important;
@@ -40,15 +53,21 @@
 </head>
 <body class="min-h-screen pb-12">
 
-  <!-- Header -->
-  <header class="bg-[#6B1D2F] text-white shadow-md sticky top-0 z-30 p-3">
+  <!-- Header mit eingebettetem Original-Logo -->
+  <header class="app-header bg-[#6B1D2F] text-white shadow-md p-2.5">
     <div class="max-w-4xl mx-auto flex justify-between items-center gap-2">
-      <div>
-        <h1 class="font-bold text-base sm:text-lg text-[#C5A059]">🍷 Heider's Weine & mehr</h1>
-        <p class="text-[11px] text-stone-200">Dienstplan-System</p>
-      </div>
       <div class="flex items-center gap-2">
-        <!-- Admin-Only Dropdown (Nur Pia & Nelly) -->
+        <!-- Logo Container -->
+        <div class="bg-white p-1 rounded-lg border border-[#C5A059]/80 shadow-sm flex items-center justify-center h-10 w-auto">
+          <img id="appLogo" class="h-8 w-auto object-contain" alt="Heider's Logo" />
+        </div>
+        <div>
+          <h1 class="font-bold text-sm sm:text-base text-[#C5A059] leading-tight">Heider's Weine & Mehr</h1>
+          <p class="text-[10px] text-stone-200">Dienstplan-System</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <!-- Admin-Only Dropdown (Pia & Nelly) -->
         <div id="adminUserSelectWrapper" class="hidden">
           <select id="userSelect" onchange="changeUser(this.value)" class="bg-[#521422] text-white text-xs font-bold py-1.5 px-2 rounded border border-[#C5A059]/50 focus:outline-none">
           </select>
@@ -85,8 +104,8 @@
       <div class="flex justify-between items-center">
         <button onclick="changeWeek(-1)" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-lg font-bold text-xs text-[#6B1D2F]">❮ Zurück</button>
         <div class="text-center">
-          <span id="weekTitle" class="font-bold text-xs sm:text-sm block text-[#2B2321]">Woche ab Mo, 05.10.</span>
-          <span id="weekRange" class="text-[10px] sm:text-xs text-stone-500">05.10. – 11.10.2026</span>
+          <span id="weekTitle" class="font-bold text-xs sm:text-sm block text-[#2B2321]">Woche ab Mo...</span>
+          <span id="weekRange" class="text-[10px] sm:text-xs text-stone-500">...</span>
         </div>
         <button onclick="changeWeek(1)" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-lg font-bold text-xs text-[#6B1D2F]">Vor ❯</button>
       </div>
@@ -130,17 +149,17 @@
     <div id="tabFullPlan" class="space-y-3">
       <div id="adminControls" class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs hidden">
         <span class="font-bold block text-amber-900 mb-1">👑 Inhaber- & Admin-Steuerung (Nelly & Pia)</span>
-        <button onclick="openSollModal()" class="px-3 py-1.5 bg-[#6B1D2F] text-white rounded font-bold shadow">⚙️ Soll-Personal & Events festlegen</button>
+        <button onclick="openSollModal()" class="px-3 py-1.5 bg-[#6B1D2F] text-white rounded font-bold shadow">⚙️ Soll, Events & Reservierungen festlegen</button>
       </div>
 
       <div class="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
         <div class="p-2.5 bg-stone-50 border-b border-stone-200 flex justify-between items-center text-xs">
-          <span class="font-bold text-[#2B2321]">Gesamtübersicht Heider's</span>
+          <span class="font-bold text-[#2B2321]">Gesamtübersicht Heider's Weine & Mehr</span>
           <span class="text-stone-500">Live</span>
         </div>
         
         <div class="overflow-x-auto custom-scrollbar">
-          <table class="w-full text-left text-xs min-w-[750px] sticky-table">
+          <table class="w-full text-left text-xs min-w-[760px] sticky-table">
             <thead>
               <tr class="bg-[#F5EFEE] text-[#6B1D2F] font-bold border-b border-stone-200" id="tableHeaderRow">
                 <th class="p-2 sticky-col">Mitarbeiter</th>
@@ -174,11 +193,11 @@
 
   </main>
 
-  <!-- Modal for Admin Soll & Events -->
+  <!-- Modal for Admin Soll, Events & Reservierungen -->
   <div id="sollModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 hidden">
     <div class="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-4 shadow-xl text-xs">
       <div class="flex justify-between items-center border-b border-stone-200 pb-2 mb-3">
-        <h3 class="font-bold text-[#6B1D2F] text-sm">Soll-Personal & Events</h3>
+        <h3 class="font-bold text-[#6B1D2F] text-sm">Soll, Events & Reservierungen</h3>
         <button onclick="closeSollModal()" class="text-stone-400 font-bold text-base">✕</button>
       </div>
       <div id="sollModalContent" class="space-y-3"></div>
@@ -190,15 +209,25 @@
   </div>
 
   <script>
+    // Funktion zur Ermittlung des Montags der aktuellen Woche
+    function getStartOfCurrentWeek() {
+      const d = new Date();
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Anpassen falls Sonntag (0)
+      const monday = new Date(d.setDate(diff));
+      monday.setHours(0, 0, 0, 0);
+      return monday;
+    }
+
     const team = [
-      { name: 'Pia', role: 'Inhaberin / Küche', isAdmin: true },
-      { name: 'Nelly', role: 'Admin & Service/Küche', isAdmin: true },
+      { name: 'Pia', role: 'Admin · Küche & Service/Theke', isAdmin: true },
+      { name: 'Nelly', role: 'Admin · Service/Theke', isAdmin: true },
+      { name: 'Valeria', role: 'Küche & Service/Theke', isAdmin: false },
+      { name: 'Martina', role: 'Küche', isAdmin: false },
       { name: 'Max', role: 'Service & Theke', isAdmin: false },
-      { name: 'Patricia', role: 'Service & Küche', isAdmin: false },
-      { name: 'Martina', role: 'Service & Küche', isAdmin: false },
+      { name: 'Patricia', role: 'Service & Theke', isAdmin: false },
       { name: 'Tina', role: 'Service & Theke', isAdmin: false },
       { name: 'Nadja', role: 'Service & Theke', isAdmin: false },
-      { name: 'Valeria', role: 'Service & Küche', isAdmin: false },
       { name: 'Sophie', role: 'Service & Theke', isAdmin: false },
       { name: 'Esther', role: 'Service & Theke', isAdmin: false },
       { name: 'Jane', role: 'Service & Theke', isAdmin: false },
@@ -206,14 +235,16 @@
     ];
 
     let currentUser = localStorage.getItem('heiders_user') || null;
-    let currentWeekStart = new Date(2026, 9, 5); // Mo 05.10.2026
+    let currentWeekStart = getStartOfCurrentWeek(); // DYNAMISCHER EINSTIEG IN DIE AKTUELLE WOCHE
     let showSpecialDays = false;
-    let activeTab = 'fullPlan'; // STANDARDEINSTIEG GESAMTPLAN
+    let activeTab = 'fullPlan';
 
-    // Feste Start-Datenbank mit allen 8 Wochen aus deiner Excel
+    // Feste Start-Datenbank
     const seedDB = {
       "2026-10-05": {
         "events": { "do": "Lesung - 45 Leute am Abend" },
+        "resTag": {},
+        "resAbend": { "do": "45 Pers. Lesung" },
         "soll": { "di": {"tag": 2, "abend": 3}, "mi": {"tag": 2, "abend": 3}, "do": {"tag": 2, "abend": 2}, "fr": {"tag": 2, "abend": 3}, "sa": {"tag": 2, "abend": 3} },
         "note": "Nadja: 06.10. hätte kommen sollen, stand im Plan ist nicht gekommen · Valeria kann auch küche machen",
         "shifts": {
@@ -227,6 +258,8 @@
       },
       "2026-10-12": {
         "events": { "sa": "34 Leute Geschlossene & 10 separat" },
+        "resTag": {},
+        "resAbend": { "sa": "34p Geschlossene + 10p" },
         "soll": { "di": {"tag": 2, "abend": 3}, "mi": {"tag": 2, "abend": 2}, "do": {"tag": 2, "abend": 2}, "fr": {"tag": 2, "abend": 3}, "sa": {"tag": 2, "abend": 3} },
         "note": "Di Abend: Nadja ab 17h · Fr Tag: Patricia 11-15h",
         "shifts": {
@@ -237,76 +270,6 @@
           "Nadja": { "di": {"abend": "se (ab 17h)"} },
           "Valeria": { "sa": {"abend": "se"} },
           "Pia": { "di": {"tag": "x", "abend": "kü"}, "mi": {"tag": "kü", "abend": "x"}, "do": {"tag": "x", "abend": "x"}, "fr": {"tag": "x", "abend": "kü"}, "sa": {"tag": "kü", "abend": "kü"} }
-        }
-      },
-      "2026-10-19": {
-        "events": {},
-        "soll": { "di": {"tag": 2, "abend": 3}, "mi": {"tag": 2, "abend": 3}, "do": {"tag": 2, "abend": 2}, "fr": {"tag": 2, "abend": 3}, "sa": {"tag": 2, "abend": 3} },
-        "note": "Fr Tag: Patricia 11-15h · Sa Abend: Tina ab 15h",
-        "shifts": {
-          "Max": { "di": {"abend": "th"}, "mi": {"abend": "th"}, "fr": {"tag": "u", "abend": "se"}, "sa": {"tag": "u", "abend": "u"} },
-          "Patricia": { "mi": {"tag": "th"}, "fr": {"tag": "Kü 11–15"} },
-          "Martina": { "di": {"tag": "kü"}, "do": {"tag": "kü"} },
-          "Tina": { "sa": {"abend": "se 15"} },
-          "Pia": { "di": {"tag": "x", "abend": "kü"}, "mi": {"tag": "kü", "abend": "x"}, "do": {"tag": "x", "abend": "x"}, "fr": {"tag": "x", "abend": "kü"}, "sa": {"tag": "kü", "abend": "kü"} }
-        }
-      },
-      "2026-10-26": {
-        "events": {},
-        "soll": { "di": {"tag": 2, "abend": 3}, "mi": {"tag": 2, "abend": 3}, "do": {"tag": 2, "abend": 2}, "fr": {"tag": 2, "abend": 3}, "sa": {"tag": 1, "abend": 3} },
-        "note": "Sa Abend: Tina 17-23h",
-        "shifts": {
-          "Max": { "di": {"abend": "se"}, "mi": {"abend": "se"}, "fr": {"abend": "se"}, "sa": {"tag": "u"} },
-          "Patricia": { "mi": {"tag": "se"}, "do": {"tag": "se"}, "fr": {"tag": "se"} },
-          "Martina": { "mo": {"tag": "u", "abend": "u"}, "di": {"tag": "u", "abend": "u"}, "mi": {"tag": "u", "abend": "u"}, "do": {"tag": "u", "abend": "u"}, "fr": {"tag": "u", "abend": "u"}, "sa": {"tag": "u", "abend": "u"} },
-          "Tina": { "sa": {"abend": "Se 17–23"} },
-          "Pia": { "di": {"tag": "x", "abend": "kü"}, "mi": {"tag": "kü", "abend": "x"}, "do": {"tag": "x", "abend": "x"}, "fr": {"tag": "x", "abend": "kü"}, "sa": {"tag": "kü", "abend": "kü"} }
-        }
-      },
-      "2026-11-02": {
-        "events": {},
-        "soll": { "di": {"tag": 2, "abend": 3}, "mi": {"tag": 2, "abend": 3}, "do": {"tag": 2, "abend": 2}, "fr": {"tag": 2, "abend": 3}, "sa": {"tag": 2, "abend": 2} },
-        "note": "Martina ganztägig Urlaub",
-        "shifts": {
-          "Max": { "di": {"abend": "se"}, "mi": {"abend": "se"}, "fr": {"abend": "u"}, "sa": {"abend": "se"} },
-          "Patricia": { "mi": {"tag": "se"}, "do": {"tag": "se"}, "fr": {"tag": "se"} },
-          "Martina": { "mo": {"tag": "u", "abend": "u"}, "di": {"tag": "u", "abend": "u"}, "mi": {"tag": "u", "abend": "u"}, "do": {"tag": "u", "abend": "u"}, "fr": {"tag": "u", "abend": "u"}, "sa": {"tag": "u", "abend": "u"} },
-          "Pia": { "di": {"tag": "x", "abend": "kü"}, "mi": {"tag": "kü", "abend": "x"}, "do": {"tag": "x", "abend": "x"}, "fr": {"tag": "x", "abend": "kü"}, "sa": {"tag": "kü", "abend": "kü"} }
-        }
-      },
-      "2026-11-09": {
-        "events": { "sa": "12 Personen reservierung Abend" },
-        "soll": { "di": {"tag": 2, "abend": 3}, "mi": {"tag": 2, "abend": 3}, "do": {"tag": 2, "abend": 2}, "fr": {"tag": 2, "abend": 3}, "sa": {"tag": 1, "abend": 2} },
-        "note": "Do Abend: Max frei · Mi Tag: Patricia bons · Mi Tag: Valeria noch offen (?)",
-        "shifts": {
-          "Max": { "di": {"abend": "se"}, "mi": {"tag": "th", "abend": "se"}, "fr": {"abend": "f"}, "sa": {"abend": "se"} },
-          "Patricia": { "mi": {"tag": "bons"}, "do": {"tag": "se"}, "fr": {"tag": "se"} },
-          "Martina": { "di": {"tag": "se"} },
-          "Tina": { "mi": {"tag": "th"} },
-          "Valeria": { "mi": {"tag": "?"} },
-          "Pia": { "di": {"tag": "x", "abend": "kü"}, "mi": {"tag": "x", "abend": "x"}, "do": {"tag": "x", "abend": "x"}, "fr": {"tag": "x", "abend": "kü"}, "sa": {"tag": "kü", "abend": "kü"} }
-        }
-      },
-      "2026-11-16": {
-        "events": { "fr": "20 Personen Geburtstag Abend - Küche gebraucht" },
-        "soll": { "di": {"tag": 2, "abend": 3}, "mi": {"tag": 2, "abend": 3}, "do": {"tag": 2, "abend": 1}, "fr": {"tag": 2, "abend": 3}, "sa": {"tag": 1, "abend": 2} },
-        "note": "Do Abend: Max frei",
-        "shifts": {
-          "Max": { "di": {"abend": "se"}, "mi": {"abend": "se"}, "fr": {"abend": "f"}, "sa": {"tag": "se", "abend": "se"} },
-          "Patricia": { "mi": {"tag": "se"}, "do": {"tag": "se"}, "fr": {"tag": "se"} },
-          "Martina": { "di": {"tag": "se"} },
-          "Pia": { "di": {"tag": "x", "abend": "kü"}, "mi": {"tag": "x", "abend": "x"}, "do": {"tag": "x", "abend": "x"}, "fr": {"tag": "x", "abend": "kü"}, "sa": {"tag": "kü", "abend": "kü"} }
-        }
-      },
-      "2026-11-23": {
-        "events": {},
-        "soll": { "di": {"tag": 2, "abend": 3}, "mi": {"tag": 2, "abend": 3}, "do": {"tag": 3, "abend": 2}, "fr": {"tag": 2, "abend": 3}, "sa": {"tag": 1, "abend": 2} },
-        "note": "Do Abend: Max frei · Do Abend: Patricia unsicher",
-        "shifts": {
-          "Max": { "di": {"abend": "se"}, "mi": {"abend": "se"}, "fr": {"abend": "F"}, "sa": {"tag": "se", "abend": "se"} },
-          "Patricia": { "mi": {"tag": "se"}, "do": {"tag": "se", "abend": "se?"}, "fr": {"tag": "se"} },
-          "Martina": { "di": {"tag": "se"}, "do": {"tag": "kü"} },
-          "Pia": { "di": {"tag": "x", "abend": "kü"}, "mi": {"tag": "x", "abend": "x"}, "do": {"tag": "x", "abend": "x"}, "fr": {"tag": "x", "abend": "kü"}, "sa": {"tag": "kü", "abend": "kü"} }
         }
       }
     };
@@ -340,7 +303,7 @@
         setupUserInterface();
       }
       loadWeekData();
-      switchTab('fullPlan'); // Standardeinstieg Gesamtplan aktivieren
+      switchTab('fullPlan');
       renderApp();
     }
 
@@ -412,6 +375,8 @@
       if (!db[weekKey]) {
         db[weekKey] = {
           events: { di: '', mi: '', do: '', fr: '', sa: '', mo: '', so: '' },
+          resTag: {},
+          resAbend: {},
           soll: {
             di: { tag: 2, abend: 3 },
             mi: { tag: 2, abend: 3 },
@@ -501,7 +466,7 @@
       weekEnd.setDate(weekEnd.getDate() + 6);
 
       document.getElementById('weekTitle').innerText = `Woche ab Mo, ${formatDateShort(currentWeekStart)}.`;
-      document.getElementById('weekRange').innerText = `${formatDateShort(currentWeekStart)} – ${formatDateShort(weekEnd)}.2026`;
+      document.getElementById('weekRange').innerText = `${formatDateShort(currentWeekStart)} – ${formatDateShort(weekEnd)}.${weekEnd.getFullYear()}`;
 
       const noteText = db[weekKey]?.note;
       document.getElementById('noteDisplay').innerText = noteText ? noteText : 'Keine Notizen für diese Woche.';
@@ -578,6 +543,8 @@
         const dateObj = getDateForDay(index);
         const dateFormatted = `${dayObj.label}, ${formatDateShort(dateObj)}.`;
         const eventText = weekData.events[dayKey];
+        const resT = weekData.resTag?.[dayKey] || '';
+        const resA = weekData.resAbend?.[dayKey] || '';
         const userShifts = weekData.shifts[currentUser]?.[dayKey] || { tag: '-', abend: '-', timeTag: '', timeAbend: '' };
 
         const card = document.createElement('div');
@@ -595,10 +562,11 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             <!-- Tagesschicht -->
             <div class="bg-stone-50 p-2.5 rounded-lg border border-stone-200/80">
-              <div class="flex justify-between items-center mb-1.5">
+              <div class="flex justify-between items-center mb-1">
                 <span class="font-bold text-xs text-[#6B1D2F]">☀️ Tag (ab 10:30)</span>
                 <span class="text-[10px] text-stone-500">Soll: ${weekData.soll[dayKey]?.tag || 0}</span>
               </div>
+              ${resT ? `<div class="text-[10px] text-purple-800 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200 font-medium mb-1.5">📌 Res: ${resT}</div>` : ''}
               
               <div class="grid grid-cols-2 gap-1 mb-2">
                 <button onclick="updateShift('${dayKey}', 'tag', 'se')" class="py-1 px-1 rounded text-[11px] font-bold border ${['se','x','th'].includes(userShifts.tag.toLowerCase()) ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-stone-700 border-stone-300'}">
@@ -627,10 +595,11 @@
 
             <!-- Abendschicht -->
             <div class="bg-stone-50 p-2.5 rounded-lg border border-stone-200/80">
-              <div class="flex justify-between items-center mb-1.5">
+              <div class="flex justify-between items-center mb-1">
                 <span class="font-bold text-xs text-[#6B1D2F]">🌙 Abend (ab 15:00)</span>
                 <span class="text-[10px] text-stone-500">Soll: ${weekData.soll[dayKey]?.abend || 0}</span>
               </div>
+              ${resA ? `<div class="text-[10px] text-purple-800 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200 font-medium mb-1.5">📌 Res: ${resA}</div>` : ''}
               
               <div class="grid grid-cols-2 gap-1 mb-2">
                 <button onclick="updateShift('${dayKey}', 'abend', 'se')" class="py-1 px-1 rounded text-[11px] font-bold border ${['se','x','th'].includes(userShifts.abend.toLowerCase()) ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-stone-700 border-stone-300'}">
@@ -695,6 +664,8 @@
         const dateStr = formatDateShort(getDateForDay(index));
         const dayKey = dayObj.key;
         const soll = weekData.soll[dayKey] || { tag: 0, abend: 0 };
+        const resT = weekData.resTag?.[dayKey] || '';
+        const resA = weekData.resAbend?.[dayKey] || '';
 
         let countTag = 0, kitchenTag = false;
         let countAbend = 0, kitchenAbend = false;
@@ -714,13 +685,19 @@
         const abendIssue = countAbend < (soll.abend || 0) || (!kitchenAbend && (soll.abend || 0) > 0);
 
         headerRow.innerHTML += `
-          <th class="p-1.5 text-center border-r border-stone-200 min-w-[90px]">
+          <th class="p-1.5 text-center border-r border-stone-200 min-w-[95px] align-top">
             <div class="font-bold text-xs">${dayObj.label}</div>
             <div class="text-[10px] text-stone-500 mb-1">${dateStr}</div>
-            <div class="grid grid-cols-2 gap-0.5 text-[9px] font-bold">
+            <div class="grid grid-cols-2 gap-0.5 text-[9px] font-bold mb-1">
               <span class="p-0.5 rounded ${tagIssue ? 'bg-red-500 text-white' : 'bg-stone-100 text-stone-700'}">T:${soll.tag}</span>
               <span class="p-0.5 rounded ${abendIssue ? 'bg-red-500 text-white' : 'bg-stone-100 text-stone-700'}">A:${soll.abend}</span>
             </div>
+            ${(resT || resA) ? `
+              <div class="text-[8px] bg-purple-50 text-purple-900 border border-purple-200 rounded p-0.5 font-normal leading-tight">
+                ${resT ? `<span class="block font-medium truncate">T: ${resT}</span>` : ''}
+                ${resA ? `<span class="block font-medium truncate">A: ${resA}</span>` : ''}
+              </div>
+            ` : ''}
           </th>
         `;
       });
@@ -733,7 +710,6 @@
         const isCurrent = m.name === currentUser;
         tr.className = isCurrent ? 'user-highlight font-medium' : 'hover:bg-stone-50';
 
-        // KORREKTUR: Kein "flex flex-col" auf <td>, sondern ein inneres <div>
         let nameTd = `<td class="p-2 sticky-col align-middle">
           <div class="flex flex-col">
             <span class="font-bold text-[#2B2321] text-xs">${m.name}</span>
@@ -785,28 +761,40 @@
       const container = document.getElementById('sollModalContent');
       container.innerHTML = '';
 
+      if (!weekData.resTag) weekData.resTag = {};
+      if (!weekData.resAbend) weekData.resAbend = {};
+
       daysOfWeek.forEach((dayObj, index) => {
         const dayKey = dayObj.key;
         const dateStr = formatDateShort(getDateForDay(index));
         const soll = weekData.soll[dayKey] || { tag: 0, abend: 0 };
-        const evt = weekData.events[dayKey] || '';
+        const resT = weekData.resTag[dayKey] || '';
+        const resA = weekData.resAbend[dayKey] || '';
 
         container.innerHTML += `
-          <div class="p-2.5 bg-stone-50 rounded border border-stone-200">
-            <div class="font-bold text-[#2B2321] mb-1">${dayObj.label}, ${dateStr}</div>
-            <div class="grid grid-cols-2 gap-2 mb-1.5">
+          <div class="p-2.5 bg-stone-50 rounded border border-stone-200 space-y-2">
+            <div class="font-bold text-[#2B2321] text-xs">${dayObj.label}, ${dateStr}</div>
+            
+            <div class="grid grid-cols-2 gap-2">
               <div>
-                <label class="block text-[9px] text-stone-500">Soll Tag:</label>
+                <label class="block text-[9px] text-stone-500 font-bold">Soll Tag:</label>
                 <input type="number" id="soll_${dayKey}_tag" value="${soll.tag}" min="0" class="w-full p-1 border rounded text-xs">
               </div>
               <div>
-                <label class="block text-[9px] text-stone-500">Soll Abend:</label>
+                <label class="block text-[9px] text-stone-500 font-bold">Soll Abend:</label>
                 <input type="number" id="soll_${dayKey}_abend" value="${soll.abend}" min="0" class="w-full p-1 border rounded text-xs">
               </div>
             </div>
-            <div>
-              <label class="block text-[9px] text-stone-500">Veranstaltung / Event:</label>
-              <input type="text" id="evt_${dayKey}" value="${evt}" placeholder="z. B. Lesung 45 Pers." class="w-full p-1 border rounded text-xs">
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[9px] text-purple-900 font-bold">📌 Res. Tag:</label>
+                <input type="text" id="res_${dayKey}_tag" value="${resT}" placeholder="z.B. 15 Pers. Mittags" class="w-full p-1 border rounded text-xs">
+              </div>
+              <div>
+                <label class="block text-[9px] text-purple-900 font-bold">📌 Res. Abend:</label>
+                <input type="text" id="res_${dayKey}_abend" value="${resA}" placeholder="z.B. 45 Pers. Lesung" class="w-full p-1 border rounded text-xs">
+              </div>
             </div>
           </div>
         `;
@@ -821,14 +809,19 @@
 
     function saveSollSettings() {
       const weekKey = getWeekKey(currentWeekStart);
+      if (!db[weekKey].resTag) db[weekKey].resTag = {};
+      if (!db[weekKey].resAbend) db[weekKey].resAbend = {};
+
       daysOfWeek.forEach(dayObj => {
         const dayKey = dayObj.key;
         const tagVal = parseInt(document.getElementById(`soll_${dayKey}_tag`).value) || 0;
         const abendVal = parseInt(document.getElementById(`soll_${dayKey}_abend`).value) || 0;
-        const evtVal = document.getElementById(`evt_${dayKey}`).value;
+        const resTVal = document.getElementById(`res_${dayKey}_tag`).value;
+        const resAVal = document.getElementById(`res_${dayKey}_abend`).value;
 
         db[weekKey].soll[dayKey] = { tag: tagVal, abend: abendVal };
-        db[weekKey].events[dayKey] = evtVal;
+        db[weekKey].resTag[dayKey] = resTVal;
+        db[weekKey].resAbend[dayKey] = resAVal;
       });
 
       saveDB();
