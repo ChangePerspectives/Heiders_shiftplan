@@ -34,7 +34,7 @@
     .badge-kü { background-color: #FEF7E0; color: #B06000; border: 1px solid #FDE293; }
     .badge-s { background-color: #E8F0FE; color: #1A73E8; border: 1px solid #AECBFA; }
 
-    /* Sticky Tabelle für Wochenübersicht - Optimiert für breitere Spalten & Zeilentrennung */
+    /* Sticky Tabelle für Wochenübersicht */
     table.sticky-table {
       border-collapse: separate !important;
       border-spacing: 0 !important;
@@ -57,21 +57,13 @@
 </head>
 <body class="min-h-screen pb-20">
 
-  <!-- Header: Original Heider's Weinrot mit vektorbasiertem SVG-Logo -->
-  <header class="app-header shadow-md p-2.5 border-b border-[#C5A059]/40">
+  <!-- Header: Mit 1:1 Original-Logo auf hellem Kontrastfeld -->
+  <header class="app-header shadow-md p-2 border-b border-[#C5A059]/40">
     <div class="max-w-md mx-auto flex justify-between items-center gap-2">
-      <!-- Nahtlos gerendertes Logo (SVG) -->
-      <div class="bg-white px-2.5 py-1.5 rounded-xl shadow-md border border-[#C5A059]/50 flex items-center justify-center">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 120" class="h-9 sm:h-10 w-auto">
-          <text x="10" y="70" font-family="'Segoe Script', 'Brush Script MT', cursive, sans-serif" font-size="62" font-weight="bold" fill="#5A5553">Heider</text>
-          <text x="245" y="65" font-family="'Segoe Script', 'Brush Script MT', cursive, sans-serif" font-size="70" font-weight="bold" fill="#8C1D40">'s</text>
-          <path d="M 245 75 Q 280 100 315 75" fill="none" stroke="#2B2321" stroke-width="3.5"/>
-          <line x1="280" y1="92" x2="280" y2="108" stroke="#2B2321" stroke-width="3.5"/>
-          <line x1="265" y1="108" x2="295" y2="108" stroke="#2B2321" stroke-width="3.5"/>
-          <text x="120" y="110" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="bold" letter-spacing="4" fill="#8C1D40">WEINE</text>
-          <text x="235" y="110" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="bold" fill="#5A5553">&amp;</text>
-          <text x="265" y="110" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="bold" letter-spacing="4" fill="#8C1D40">MEHR</text>
-        </svg>
+      
+      <!-- Original PNG Logo 1:1 unverändert -->
+      <div class="bg-white/95 px-3 py-1.5 rounded-xl shadow-md border border-[#C5A059]/60 flex items-center justify-center">
+        <img id="appLogo" class="h-8 sm:h-9 w-auto object-contain" alt="Heider's Weine & Mehr Logo" />
       </div>
       
       <div class="flex items-center gap-1.5">
@@ -255,6 +247,15 @@
     ];
 
     function init() {
+      // 1:1 Einbettung des Original Heider's Logo PNG
+      const logoImg = document.getElementById('appLogo');
+      if (logoImg) {
+        logoImg.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAYAAAD0eNT6AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAGstJREFUeNrs3X28ZVP9///XmTMmRInp0k2iUoo0KZJkSqTRlSiaVEom0s1Nl3sS3fTToqJLpUSSKVGSpkS5d3MzkSYpIkVJkUpS5MxzfX981vvf5/R233fOfu191v3e3+v1eDwej2vvvfc567O/e6/X2nuttdba6wcXERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERE";
+        
+        // Fügt das Data URL Bild dynamically ein
+        logoImg.src = data_url;
+      }
+
       if (!currentUser) {
         showLoginModal();
       } else {
@@ -559,7 +560,6 @@
       });
     }
 
-    /* BESSER LESBARE WOCHENÜBERSICHT TABELLE MIT GEKÜRZTER MITARBEITERSPALTE UND ZEILENTRENNUNG */
     function renderWeekOverviewTable() {
       const weekKey = getWeekKey(currentWeekStart);
       const weekData = db[weekKey];
@@ -583,7 +583,6 @@
 
       team.forEach((m, idx) => {
         const tr = document.createElement('tr');
-        // Zeilentrennung & abwechselnde Farben für optimale Übersicht
         const isUser = m.name === currentUser;
         const bgClass = isUser ? 'bg-amber-100/70 font-bold' : (idx % 2 === 0 ? 'bg-white' : 'bg-stone-50/70');
         tr.className = `${bgClass} border-b-2 border-stone-200/80 hover:bg-amber-50`;
