@@ -1,8 +1,8 @@
 // Bei jeder Veröffentlichung CACHE_VERSION ändern (oder dieses Paket vollständig ersetzen).
-const CACHE_VERSION = 'v4-9-scrollable-week-overview-20261007';
+const CACHE_VERSION = 'v4-10-overview-home-icon-20261007';
 const PREFIX = 'heiders-app-';
 const CACHE = PREFIX + CACHE_VERSION;
-const SHELL = ["./", "./index.html", "./cloud.js", "./config.js", "./supabase.js", "./design.css", "./design.js", "./demo.js", "./manifest.webmanifest", "./icon-192-v2.png", "./icon-512-v2.png", "./icon-maskable-512-v2.png", "./apple-touch-icon-v2.png", "./jspdf.js", "./pdf-font.js", "./pdf-export.js"];
+const SHELL = ["./", "./index.html", "./cloud.js", "./config.js", "./supabase.js", "./design.css", "./design.js", "./demo.js", "./manifest-v4-10.webmanifest", "./icon-192-v4-10.png", "./icon-512-v4-10.png", "./icon-maskable-512-v4-10.png", "./apple-touch-icon-v4-10.png", "./jspdf.js", "./pdf-font.js", "./pdf-export.js"];
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);

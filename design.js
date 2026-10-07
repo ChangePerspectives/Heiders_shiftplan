@@ -1,5 +1,4 @@
 'use strict';
-let overviewFocusDay='mo';
 let focusDay='do',activeTab='cards',transferContext=null,lastUndo=null;
 const shortDay={mo:'Mo',di:'Di',mi:'Mi',do:'Do',fr:'Fr',sa:'Sa',so:'So'};
 function serverNow(){return Date.now()+cloudServerOffset;}
@@ -49,17 +48,13 @@ function renderDayViews(){
  const picker=days.map(d=>`<button data-day="${d.key}" class="${d.key===focusDay?'active':''}" aria-pressed="${d.key===focusDay}" onclick="selectFocusDay('${d.key}')">${shortDay[d.key]}<span>${getDateForDay(daysOfWeek.indexOf(d)).getDate()}</span></button>`).join('');
  const strip=`<button class="week-step" onclick="navigateWeekAtDays(-1)" aria-label="Vorherige Woche">‹</button><div class="day-track" aria-label="Tage dieser Woche">${picker}</div><button class="week-step" onclick="navigateWeekAtDays(1)" aria-label="Nächste Woche">›</button>`;
  document.getElementById('dayPickerCards').innerHTML=strip;
- const overviewPicker=daysOfWeek.map(d=>`<button data-day="${d.key}" class="${d.key===overviewFocusDay?'active':''}" aria-pressed="${d.key===overviewFocusDay}" onclick="selectOverviewDay('${d.key}')">${shortDay[d.key]}<span>${getDateForDay(daysOfWeek.indexOf(d)).getDate()}</span></button>`).join('');
- document.getElementById('dayPickerTeam').innerHTML=`<button class="week-step" onclick="navigateWeekAtDays(-1)" aria-label="Vorherige Woche">‹</button><div class="day-track" aria-label="Zu einem Tag in dieser Woche springen">${overviewPicker}</div><button class="week-step" onclick="navigateWeekAtDays(1)" aria-label="Nächste Woche">›</button>`;
- for(const id of ['dayPickerCards','dayPickerTeam']){const track=document.getElementById(id).querySelector('.day-track'),button=track?.querySelector('[aria-pressed="true"]');if(button)track.scrollLeft=Math.max(0,button.offsetLeft-track.offsetLeft-track.clientWidth/2+button.offsetWidth/2);}
+ const track=document.getElementById('dayPickerCards').querySelector('.day-track'),button=track?.querySelector('[aria-pressed="true"]');if(button)track.scrollLeft=Math.max(0,button.offsetLeft-track.offsetLeft-track.clientWidth/2+button.offsetWidth/2);
  document.getElementById('dailyCardsContainer').innerHTML=dayMarkup(true);
  document.getElementById('teamDayContainer').innerHTML=daysOfWeek.map(d=>`<section class="overview-day" id="overview-${d.key}" aria-label="${escapeHtml(d.label)}">${dayMarkup(false,d.key)}</section>`).join('');
 }
-function selectOverviewDay(day){
- if(!daysOfWeek.some(d=>d.key===day))return;
- overviewFocusDay=day;
- document.querySelectorAll('#dayPickerTeam [data-day]').forEach(button=>{const selected=button.getAttribute('data-day')===day;button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));});
- document.getElementById('overview-'+day)?.scrollIntoView({behavior:'smooth',block:'start'});
+function overviewToTop(){
+ window.scrollTo({top:0,behavior:'smooth'});
+ document.getElementById('screenTitle').focus({preventScroll:true});
 }
 function dayMarkup(edit,selectedDay=focusDay){
  const data=db[getWeekKey(currentWeekStart)],day=selectedDay,index=daysOfWeek.findIndex(d=>d.key===day);
@@ -383,7 +378,6 @@ async function openCapacityWeek(week,day){if(planEditor){requestEditorAction(()=
 
 async function navigateWeekAtDays(direction){
  if(cloudBusy)return;const y=window.scrollY;await changeWeek(direction);
- if(activeTab==='week'){renderDayViews();selectOverviewDay(direction>0?'mo':'so');return;}
  const days=visibleDays();focusDay=(direction>0?days[0]:days.at(-1))?.key||'di';renderDayViews();
  window.scrollTo({top:y,behavior:'instant'});
 }

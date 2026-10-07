@@ -1,0 +1,31 @@
+{
+  "id": "./",
+  "name": "Heiders Dienstplan",
+  "short_name": "Heiders Dienstplan",
+  "lang": "de",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F8F4F4",
+  "theme_color": "#F8F4F4",
+  "icons": [
+    {
+      "src": "./icon-192-v4-10.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512-v4-10.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-maskable-512-v4-10.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
