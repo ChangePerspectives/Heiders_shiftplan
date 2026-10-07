@@ -5,228 +5,153 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Heider's Weine & mehr · Dienstplan</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            heiderBg: '#FDFBF7',
-            heiderCard: '#FFFFFF',
-            heiderBurgundy: '#6B1D2F',
-            heiderBurgundyHover: '#521422',
-            heiderGold: '#C5A059',
-            heiderDark: '#2B2321',
-            heiderMuted: '#6E655F',
-            heiderAccentBg: '#F5EFEE'
-          }
-        }
-      }
-    }
-  </script>
   <style>
-    body {
-      background-color: #FDFBF7;
-      color: #2B2321;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }
-    .custom-scrollbar::-webkit-scrollbar {
-      height: 6px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-      background: #F5EFEE;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #C5A059;
-      border-radius: 3px;
-    }
+    body { background-color: #FDFBF7; color: #2B2321; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .btn-active { background-color: #6B1D2F !important; color: white !important; }
+    .btn-inactive { background-color: #E5E7EB !important; color: #374151 !important; }
+    .custom-scrollbar::-webkit-scrollbar { height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #F5EFEE; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #C5A059; border-radius: 3px; }
   </style>
 </head>
 <body class="min-h-screen pb-12">
 
   <!-- Header -->
-  <header class="bg-heiderBurgundy text-white shadow-md sticky top-0 z-30">
-    <div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
+  <header class="bg-[#6B1D2F] text-white shadow-md sticky top-0 z-30 p-3">
+    <div class="max-w-4xl mx-auto flex justify-between items-center gap-2">
       <div>
-        <h1 class="font-serif text-lg md:text-xl font-bold tracking-wide text-heiderGold flex items-center gap-2">
-          <i class="fa-solid font-normal fa-wine-glass text-heiderGold"></i> Heider's Weine & mehr
-        </h1>
-        <p class="text-xs text-stone-200">Verbindlicher Team-Dienstplan</p>
+        <h1 class="font-bold text-base sm:text-lg text-[#C5A059]">🍷 Heider's Weine & mehr</h1>
+        <p class="text-[11px] text-stone-200">Dienstplan-System</p>
       </div>
-      
-      <!-- User Switcher -->
-      <div class="flex items-center gap-2">
-        <label for="userSelect" class="text-xs font-medium text-stone-200 hidden sm:inline">Angemeldet als:</label>
-        <select id="userSelect" onchange="changeUser(this.value)" class="bg-heiderBurgundyHover text-white text-sm font-semibold py-1.5 px-3 rounded-lg border border-heiderGold/40 focus:outline-none focus:ring-2 focus:ring-heiderGold">
-          <!-- Populated by JS -->
+      <div>
+        <select id="userSelect" onchange="changeUser(this.value)" class="bg-[#521422] text-white text-xs font-bold py-1.5 px-2 rounded border border-[#C5A059]/50 focus:outline-none">
         </select>
       </div>
     </div>
   </header>
 
-  <!-- Navigation Bar (Woche & Tabs) -->
-  <div class="max-w-4xl mx-auto px-4 mt-4">
-    <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-3 flex flex-col md:flex-row justify-between items-center gap-3">
+  <!-- Navigation & Tabs -->
+  <div class="max-w-4xl mx-auto px-3 mt-3">
+    <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-3 space-y-3">
       
-      <!-- Datumsnavigation -->
-      <div class="flex items-center justify-between w-full md:w-auto gap-2">
-        <button onclick="changeWeek(-1)" class="p-2 rounded-lg bg-heiderAccentBg hover:bg-stone-200 text-heiderBurgundy transition-colors">
-          <i class="fa-solid fa-chevron-left"></i>
-        </button>
-        <div class="text-center px-2">
-          <span id="weekTitle" class="font-bold text-sm md:text-base text-heiderDark block">Woche ab 05.10.2026</span>
-          <span id="weekRange" class="text-xs text-heiderMuted">05.10. – 11.10.2026</span>
+      <div class="flex justify-between items-center">
+        <button onclick="changeWeek(-1)" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-lg font-bold text-xs text-[#6B1D2F]">❮ Zurück</button>
+        <div class="text-center">
+          <span id="weekTitle" class="font-bold text-xs sm:text-sm block text-[#2B2321]">Woche ab Mo, 05.10.</span>
+          <span id="weekRange" class="text-[10px] sm:text-xs text-stone-500">05.10. – 11.10.2026</span>
         </div>
-        <button onclick="changeWeek(1)" class="p-2 rounded-lg bg-heiderAccentBg hover:bg-stone-200 text-heiderBurgundy transition-colors">
-          <i class="fa-solid fa-chevron-right"></i>
-        </button>
+        <button onclick="changeWeek(1)" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-lg font-bold text-xs text-[#6B1D2F]">Vor ❯</button>
       </div>
 
-      <!-- Main Tabs -->
-      <div class="flex rounded-lg bg-stone-100 p-1 w-full md:w-auto text-xs sm:text-sm">
-        <button id="tabMyShiftsBtn" onclick="switchTab('myShifts')" class="flex-1 md:flex-initial px-4 py-1.5 rounded-md font-semibold transition-all shadow-sm bg-white text-heiderBurgundy">
-          <i class="fa-solid fa-user-pen mr-1"></i> Meine Schichten
-        </button>
-        <button id="tabFullPlanBtn" onclick="switchTab('fullPlan')" class="flex-1 md:flex-initial px-4 py-1.5 rounded-md font-semibold transition-all text-stone-600 hover:text-heiderDark">
-          <i class="fa-solid fa-calendar-days mr-1"></i> Gesamtplan
-        </button>
+      <div class="flex rounded-lg bg-stone-100 p-1 text-xs">
+        <button id="tabMyShiftsBtn" onclick="switchTab('myShifts')" class="flex-1 py-2 rounded-md font-bold btn-active">✏️ Meine Schichten</button>
+        <button id="tabFullPlanBtn" onclick="switchTab('fullPlan')" class="flex-1 py-2 rounded-md font-bold btn-inactive">📅 Gesamtplan</button>
       </div>
+
     </div>
   </div>
 
   <!-- Alarmsystem Banner -->
-  <div class="max-w-4xl mx-auto px-4 mt-3">
-    <div id="alarmBanner" class="p-3 rounded-xl shadow-sm flex items-start gap-3 bg-emerald-50 border border-emerald-200 text-emerald-900 transition-all">
-      <i id="alarmIcon" class="fa-solid fa-circle-check text-emerald-600 text-lg mt-0.5"></i>
-      <div class="flex-1 text-xs sm:text-sm">
-        <span id="alarmTitle" class="font-bold block">Alles optimal besetzt</span>
-        <span id="alarmMessage">Alle Schichten dieser Woche erfüllen das benötigte Personal-Soll und Küchenpersonal.</span>
-      </div>
+  <div class="max-w-4xl mx-auto px-3 mt-3">
+    <div id="alarmBanner" class="p-3 rounded-xl shadow-sm text-xs bg-emerald-50 border border-emerald-200 text-emerald-900">
+      <span id="alarmTitle" class="font-bold block text-sm">✅ Alles optimal besetzt</span>
+      <span id="alarmMessage">Alle Schichten dieser Woche haben ausreichend Personal.</span>
     </div>
   </div>
 
-  <!-- Main Content Container -->
-  <main class="max-w-4xl mx-auto px-4 mt-4">
+  <!-- Main Content -->
+  <main class="max-w-4xl mx-auto px-3 mt-3">
     
-    <!-- TAB 1: MEINE SCHICHTEN (Self-Service) -->
-    <div id="tabMyShifts" class="space-y-4">
-      <div class="bg-white p-4 rounded-xl border border-stone-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-        <div>
-          <h2 class="font-bold text-heiderBurgundy text-base sm:text-lg flex items-center gap-2">
-            <i class="fa-solid fa-pen-to-square"></i> Schichten eintragen für: <span id="currentUserDisplay" class="text-heiderDark underline">Nelly</span>
-          </h2>
-          <p class="text-xs text-heiderMuted">Wähle deine Arbeitszeiten verbindlich für die einzelne Woche aus.</p>
-        </div>
-        <div id="roleBadge" class="px-2.5 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-semibold">
-          Küche & Service
-        </div>
-      </div>
-
-      <!-- Sonderöffnungstage Schalter -->
-      <div class="bg-stone-50 border border-stone-200 rounded-xl p-3 flex justify-between items-center">
-        <span class="text-xs sm:text-sm text-stone-700 font-medium">Montag & Sonntag (Sonderöffnung / Events) anzeigen</span>
-        <button onclick="toggleSpecialDays()" id="specialDaysBtn" class="px-3 py-1 bg-stone-200 text-stone-700 rounded-lg text-xs font-bold hover:bg-stone-300">
-          Ausgeblendet
+    <!-- TAB 1: MEINE SCHICHTEN -->
+    <div id="tabMyShifts" class="space-y-3">
+      <div class="bg-white p-3 rounded-xl border border-stone-200 shadow-sm flex justify-between items-center">
+        <span class="font-bold text-xs sm:text-sm text-[#6B1D2F]">Angemeldet: <span id="currentUserDisplay" class="underline">Nelly</span></span>
+        <button onclick="toggleSpecialDays()" id="specialDaysBtn" class="px-2.5 py-1 bg-stone-200 text-stone-700 rounded text-xs font-bold">
+          Mo/So anzeigen
         </button>
       </div>
 
-      <!-- Schicht-Eintragungskarten pro Tag -->
-      <div id="myShiftsList" class="space-y-3">
-        <!-- Dynamic JS Rendering -->
-      </div>
+      <div id="myShiftsList" class="space-y-3"></div>
     </div>
 
-    <!-- TAB 2: GESAMTPLAN (Wochenübersicht) -->
-    <div id="tabFullPlan" class="hidden space-y-4">
-      
-      <!-- Admin Controls Bar (Wenn Nelly) -->
-      <div id="adminControls" class="bg-amber-50 border border-amber-200 rounded-xl p-4 shadow-sm hidden">
-        <h3 class="font-bold text-amber-900 text-sm flex items-center gap-2 mb-2">
-          <i class="fa-solid fa-user-shield"></i> Inhaber- & Admin-Steuerung (Nelly)
-        </h3>
-        <p class="text-xs text-amber-800 mb-3">Hier kannst du Veranstaltungen/Events eintragen sowie den Soll-Personalbedarf für die jeweiligen Schichten festlegen.</p>
-        <div class="flex flex-wrap gap-2">
-          <button onclick="openSollModal()" class="px-3 py-1.5 bg-heiderBurgundy text-white rounded-lg text-xs font-semibold hover:bg-heiderBurgundyHover">
-            <i class="fa-solid fa-users-gear mr-1"></i> Soll-Personal & Events anpassen
-          </button>
-        </div>
+    <!-- TAB 2: GESAMTPLAN -->
+    <div id="tabFullPlan" class="hidden space-y-3">
+      <div id="adminControls" class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs hidden">
+        <span class="font-bold block text-amber-900 mb-1">👑 Admin-Steuerung (Nelly)</span>
+        <button onclick="openSollModal()" class="px-3 py-1.5 bg-[#6B1D2F] text-white rounded font-bold shadow">⚙️ Soll-Personal & Events festlegen</button>
       </div>
 
-      <!-- Tabellarische Übersicht -->
       <div class="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
-        <div class="p-3 bg-stone-50 border-b border-stone-200 flex justify-between items-center">
-          <h3 class="font-bold text-heiderDark text-sm">Wochenübersicht Heider's</h3>
-          <span class="text-xs text-heiderMuted">Stand: Live</span>
+        <div class="p-2.5 bg-stone-50 border-b border-stone-200 flex justify-between items-center text-xs">
+          <span class="font-bold text-[#2B2321]">Gesamtübersicht Heider's</span>
+          <span class="text-stone-500">Live</span>
         </div>
         
         <div class="overflow-x-auto custom-scrollbar">
-          <table class="w-full text-left text-xs border-collapse min-w-[700px]">
+          <table class="w-full text-left text-xs border-collapse min-w-[650px]">
             <thead>
-              <tr class="bg-heiderAccentBg text-heiderBurgundy font-semibold border-b border-stone-200" id="tableHeaderRow">
-                <th class="p-2.5 w-32 border-r border-stone-200">Mitarbeiter</th>
-                <!-- Days populated via JS -->
+              <tr class="bg-[#F5EFEE] text-[#6B1D2F] font-bold border-b border-stone-200" id="tableHeaderRow">
+                <th class="p-2 w-28 border-r border-stone-200">Mitarbeiter</th>
               </tr>
             </thead>
             <tbody id="fullPlanTableBody" class="divide-y divide-stone-100">
-              <!-- JS Populated -->
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- Legend -->
-      <div class="bg-white p-3 rounded-xl border border-stone-200 text-xs flex flex-wrap gap-4 text-heiderMuted">
-        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> Service & Theke (x)</span>
-        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span> Küche (Kü)</span>
-        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> Springer</span>
-        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-stone-300 inline-block"></span> Nicht verfügbar (-)</span>
+      <div class="bg-white p-2.5 rounded-xl border border-stone-200 text-[11px] flex flex-wrap gap-3 text-stone-600">
+        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block"></span> Service/Theke (x)</span>
+        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-600 inline-block"></span> Küche (Kü)</span>
+        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block"></span> Springer (S)</span>
+        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-stone-400 inline-block"></span> Nicht da (-)</span>
       </div>
     </div>
 
   </main>
 
   <!-- Modal for Admin Soll & Events -->
-  <div id="sollModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-5 shadow-xl">
-      <div class="flex justify-between items-center border-b border-stone-200 pb-3 mb-4">
-        <h3 class="font-bold text-heiderBurgundy text-base">Soll-Personal & Events festlegen</h3>
-        <button onclick="closeSollModal()" class="text-stone-400 hover:text-stone-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+  <div id="sollModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 hidden">
+    <div class="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-4 shadow-xl text-xs">
+      <div class="flex justify-between items-center border-b border-stone-200 pb-2 mb-3">
+        <h3 class="font-bold text-[#6B1D2F] text-sm">Soll-Personal & Events</h3>
+        <button onclick="closeSollModal()" class="text-stone-400 font-bold text-base">✕</button>
       </div>
-      <div id="sollModalContent" class="space-y-4 text-xs">
-        <!-- JS rendered -->
-      </div>
-      <div class="mt-5 pt-3 border-t border-stone-200 flex justify-end gap-2">
-        <button onclick="closeSollModal()" class="px-4 py-2 bg-stone-100 text-stone-700 rounded-lg font-medium">Abbrechen</button>
-        <button onclick="saveSollSettings()" class="px-4 py-2 bg-heiderBurgundy text-white rounded-lg font-bold">Speichern</button>
+      <div id="sollModalContent" class="space-y-3"></div>
+      <div class="mt-4 pt-2 border-t border-stone-200 flex justify-end gap-2">
+        <button onclick="closeSollModal()" class="px-3 py-1.5 bg-stone-100 text-stone-700 rounded font-medium">Abbrechen</button>
+        <button onclick="saveSollSettings()" class="px-3 py-1.5 bg-[#6B1D2F] text-white rounded font-bold">Speichern</button>
       </div>
     </div>
   </div>
 
-  <!-- App Script Logic -->
   <script>
-    // Team Master Data
     const team = [
-      { name: 'Pia', role: 'Inhaberin / Küche', canKitchen: true, isFixedAdmin: false },
-      { name: 'Nelly', role: 'Admin & Service/Küche', canKitchen: true, isAdmin: true },
-      { name: 'Max', role: 'Service & Theke', canKitchen: false },
-      { name: 'Patricia', role: 'Service & Küche', canKitchen: true },
-      { name: 'Martina', role: 'Service & Küche', canKitchen: true },
-      { name: 'Tina', role: 'Service & Theke', canKitchen: false },
-      { name: 'Nadja', role: 'Service & Theke', canKitchen: false },
-      { name: 'Valeria', role: 'Service & Küche', canKitchen: true },
-      { name: 'Sophie', role: 'Service & Theke', canKitchen: false },
-      { name: 'Esther', role: 'Service & Theke', canKitchen: false },
-      { name: 'Jane', role: 'Service & Theke', canKitchen: false },
-      { name: 'Ralf', role: 'Service & Theke', canKitchen: false }
+      { name: 'Pia', role: 'Inhaberin / Küche', isAdmin: false },
+      { name: 'Nelly', role: 'Admin & Service/Küche', isAdmin: true },
+      { name: 'Max', role: 'Service & Theke', isAdmin: false },
+      { name: 'Patricia', role: 'Service & Küche', isAdmin: false },
+      { name: 'Martina', role: 'Service & Küche', isAdmin: false },
+      { name: 'Tina', role: 'Service & Theke', isAdmin: false },
+      { name: 'Nadja', role: 'Service & Theke', isAdmin: false },
+      { name: 'Valeria', role: 'Service & Küche', isAdmin: false },
+      { name: 'Sophie', role: 'Service & Theke', isAdmin: false },
+      { name: 'Esther', role: 'Service & Theke', isAdmin: false },
+      { name: 'Jane', role: 'Service & Theke', isAdmin: false },
+      { name: 'Ralf', role: 'Service & Theke', isAdmin: false }
     ];
 
     let currentUser = 'Nelly';
-    let currentWeekStart = new Date(2026, 9, 5); // Monday, Oct 5 2026
+    let currentWeekStart = new Date(2026, 9, 5); // Mo 05.10.2026
     let showSpecialDays = false;
     let activeTab = 'myShifts';
 
-    // Application Data Storage
-    let db = JSON.parse(localStorage.getItem('heiders_dienstplan_db')) || {};
+    let db = {};
+    try {
+      db = JSON.parse(localStorage.getItem('heiders_dienstplan_db')) || {};
+    } catch(e) {
+      db = {};
+    }
 
     const daysOfWeek = [
       { key: 'mo', label: 'Montag', isSpecial: true },
@@ -253,19 +178,19 @@
 
     function populateUserSelect() {
       const select = document.getElementById('userSelect');
-      select.innerHTML = team.map(m => `<option value="${m.name}" ${m.name === currentUser ? 'selected' : ''}>${m.name}${m.isAdmin ? '(Admin)' : ''}</option>`).join('');
+      select.innerHTML = team.map(m => `<option value="${m.name}" ${m.name === currentUser ? 'selected' : ''}>${m.name} ${m.isAdmin ? '(Admin)' : ''}</option>`).join('');
     }
 
     function changeUser(userName) {
       currentUser = userName;
       document.getElementById('currentUserDisplay').innerText = currentUser;
       const u = team.find(t => t.name === currentUser);
-      document.getElementById('roleBadge').innerText = u.role;
       
-      if (u.isAdmin) {
-        document.getElementById('adminControls').classList.remove('hidden');
+      const adminCtrl = document.getElementById('adminControls');
+      if (u && u.isAdmin) {
+        adminCtrl.classList.remove('hidden');
       } else {
-        document.getElementById('adminControls').classList.add('hidden');
+        adminCtrl.classList.add('hidden');
       }
       renderApp();
     }
@@ -289,9 +214,8 @@
     function loadWeekData() {
       const weekKey = getWeekKey(currentWeekStart);
       if (!db[weekKey]) {
-        // Initialize Default Week Data
         db[weekKey] = {
-          events: { di: '', mi: '', do: 'Lesung - 45 Leute am Abend', fr: '', sa: '', mo: '', so: '' },
+          events: { di: '', mi: '', do: 'Lesung am Abend', fr: '', sa: '', mo: '', so: '' },
           soll: {
             di: { tag: 2, abend: 3 },
             mi: { tag: 2, abend: 3 },
@@ -304,14 +228,13 @@
           shifts: {}
         };
 
-        // Default Pia entries
         team.forEach(m => {
           db[weekKey].shifts[m.name] = {
-            di: { tag: ' Kü', abend: 'Kü', timeTag: '', timeAbend: '' },
-            mi: { tag: ' Kü', abend: 'x', timeTag: '', timeAbend: '' },
-            do: { tag: 'x', abend: 'x', timeTag: '', timeAbend: '' },
-            fr: { tag: 'x', abend: 'Kü', timeTag: '', timeAbend: '' },
-            sa: { tag: 'Kü', abend: 'Kü', timeTag: '', timeAbend: '' }
+            di: { tag: (m.name === 'Pia' ? 'Kü' : '-'), abend: (m.name === 'Pia' ? 'Kü' : '-'), timeTag: '', timeAbend: '' },
+            mi: { tag: (m.name === 'Pia' ? 'Kü' : '-'), abend: (m.name === 'Pia' ? 'x' : '-'), timeTag: '', timeAbend: '' },
+            do: { tag: (m.name === 'Pia' ? 'x' : '-'), abend: (m.name === 'Pia' ? 'x' : '-'), timeTag: '', timeAbend: '' },
+            fr: { tag: (m.name === 'Pia' ? 'x' : '-'), abend: (m.name === 'Pia' ? 'Kü' : '-'), timeTag: '', timeAbend: '' },
+            sa: { tag: (m.name === 'Pia' ? 'Kü' : '-'), abend: (m.name === 'Pia' ? 'Kü' : '-'), timeTag: '', timeAbend: '' }
           };
         });
         saveDB();
@@ -319,7 +242,9 @@
     }
 
     function saveDB() {
-      localStorage.setItem('heiders_dienstplan_db', JSON.stringify(db));
+      try {
+        localStorage.setItem('heiders_dienstplan_db', JSON.stringify(db));
+      } catch(e){}
     }
 
     function changeWeek(direction) {
@@ -330,10 +255,10 @@
 
     function toggleSpecialDays() {
       showSpecialDays = !showSpecialDays;
-      document.getElementById('specialDaysBtn').innerText = showSpecialDays ? 'Eingeblendet' : 'Ausgeblendet';
+      document.getElementById('specialDaysBtn').innerText = showSpecialDays ? 'Mo/So eingeblendet' : 'Mo/So anzeigen';
       document.getElementById('specialDaysBtn').className = showSpecialDays 
-        ? 'px-3 py-1 bg-heiderBurgundy text-white rounded-lg text-xs font-bold'
-        : 'px-3 py-1 bg-stone-200 text-stone-700 rounded-lg text-xs font-bold hover:bg-stone-300';
+        ? 'px-2.5 py-1 bg-[#6B1D2F] text-white rounded text-xs font-bold'
+        : 'px-2.5 py-1 bg-stone-200 text-stone-700 rounded text-xs font-bold';
       renderApp();
     }
 
@@ -342,13 +267,13 @@
       if (tab === 'myShifts') {
         document.getElementById('tabMyShifts').classList.remove('hidden');
         document.getElementById('tabFullPlan').classList.add('hidden');
-        document.getElementById('tabMyShiftsBtn').className = 'flex-1 md:flex-initial px-4 py-1.5 rounded-md font-semibold transition-all shadow-sm bg-white text-heiderBurgundy';
-        document.getElementById('tabFullPlanBtn').className = 'flex-1 md:flex-initial px-4 py-1.5 rounded-md font-semibold transition-all text-stone-600 hover:text-heiderDark';
+        document.getElementById('tabMyShiftsBtn').className = 'flex-1 py-2 rounded-md font-bold btn-active';
+        document.getElementById('tabFullPlanBtn').className = 'flex-1 py-2 rounded-md font-bold btn-inactive';
       } else {
         document.getElementById('tabMyShifts').classList.add('hidden');
         document.getElementById('tabFullPlan').classList.remove('hidden');
-        document.getElementById('tabFullPlanBtn').className = 'flex-1 md:flex-initial px-4 py-1.5 rounded-md font-semibold transition-all shadow-sm bg-white text-heiderBurgundy';
-        document.getElementById('tabMyShiftsBtn').className = 'flex-1 md:flex-initial px-4 py-1.5 rounded-md font-semibold transition-all text-stone-600 hover:text-heiderDark';
+        document.getElementById('tabFullPlanBtn').className = 'flex-1 py-2 rounded-md font-bold btn-active';
+        document.getElementById('tabMyShiftsBtn').className = 'flex-1 py-2 rounded-md font-bold btn-inactive';
       }
     }
 
@@ -358,12 +283,9 @@
       weekEnd.setDate(weekEnd.getDate() + 6);
 
       document.getElementById('weekTitle').innerText = `Woche ab Mo, ${formatDateShort(currentWeekStart)}.`;
-      document.getElementById('weekRange').innerText = `${formatDateShort(currentWeekStart)} –${formatDateShort(weekEnd)}.2026`;
+      document.getElementById('weekRange').innerText = `${formatDateShort(currentWeekStart)} – ${formatDateShort(weekEnd)}.2026`;
 
-      // Check Alarms
       checkAlarmsAndCapacities();
-
-      // Render Tabs
       renderMyShiftsTab();
       renderFullPlanTab();
     }
@@ -399,27 +321,24 @@
           });
 
           if (countDa < reqSoll) {
-            issues.push(`${dayObj.label} (${dateStr})${shiftName}: Zu wenig Personal (${countDa}/${reqSoll})`);
+            issues.push(`${dayObj.label} (${dateStr}) ${shiftName}: Zu wenig Personal (${countDa}/${reqSoll})`);
           }
           if (!hasKitchen && reqSoll > 0) {
-            issues.push(`${dayObj.label} (${dateStr})${shiftName}: Keine Küche besetzt!`);
+            issues.push(`${dayObj.label} (${dateStr}) ${shiftName}: Keine Küche besetzt!`);
           }
         });
       });
 
       const banner = document.getElementById('alarmBanner');
-      const icon = document.getElementById('alarmIcon');
       const title = document.getElementById('alarmTitle');
       const message = document.getElementById('alarmMessage');
 
       if (issues.length === 0) {
-        banner.className = "p-3 rounded-xl shadow-sm flex items-start gap-3 bg-emerald-50 border border-emerald-200 text-emerald-900";
-        icon.className = "fa-solid fa-circle-check text-emerald-600 text-lg mt-0.5";
-        title.innerText = "Alles optimal besetzt";
+        banner.className = "p-3 rounded-xl shadow-sm text-xs bg-emerald-50 border border-emerald-200 text-emerald-900";
+        title.innerText = "✅ Alles optimal besetzt";
         message.innerText = "Alle Schichten erfüllen das vorgegebene Personal-Soll und Küchenpersonal.";
       } else {
-        banner.className = "p-3 rounded-xl shadow-sm flex items-start gap-3 bg-amber-50 border border-amber-300 text-amber-900";
-        icon.className = "fa-solid fa-triangle-exclamation text-amber-600 text-lg mt-0.5";
+        banner.className = "p-3 rounded-xl shadow-sm text-xs bg-amber-50 border border-amber-300 text-amber-900";
         title.innerText = `🚨 ALARMSYSTEM: ${issues.length} Engpass-Warnung(en)`;
         message.innerHTML = issues.map(i => `<span class="block">• ${i}</span>`).join('');
       }
@@ -436,51 +355,49 @@
 
         const dayKey = dayObj.key;
         const dateObj = getDateForDay(index);
-        const dateFormatted = `${dayObj.label},${formatDateShort(dateObj)}.`;
+        const dateFormatted = `${dayObj.label}, ${formatDateShort(dateObj)}.`;
         const eventText = weekData.events[dayKey];
         const userShifts = weekData.shifts[currentUser]?.[dayKey] || { tag: '-', abend: '-', timeTag: '', timeAbend: '' };
 
         const card = document.createElement('div');
-        card.className = "bg-white border border-stone-200 rounded-xl p-4 shadow-sm space-y-3";
+        card.className = "bg-white border border-stone-200 rounded-xl p-3 shadow-sm space-y-2.5";
 
         card.innerHTML = `
           <div class="flex justify-between items-center border-b border-stone-100 pb-2">
             <div>
-              <h3 class="font-bold text-heiderDark text-sm sm:text-base">${dateFormatted}</h3>${eventText ? `<span class="inline-block px-2 py-0.5 bg-blue-50 text-blue-800 rounded text-xs font-medium mt-1"><i class="fa-solid fa-star text-amber-500 mr-1"></i>${eventText}</span>` : ''}
+              <h3 class="font-bold text-[#2B2321] text-xs sm:text-sm">${dateFormatted}</h3>
+              ${eventText ? `<span class="inline-block px-2 py-0.5 bg-blue-50 text-blue-800 rounded text-[10px] font-medium mt-0.5">⭐ ${eventText}</span>` : ''}
             </div>
-            <span class="text-xs font-semibold px-2.5 py-1 bg-stone-100 rounded-full text-stone-600">${dayObj.isSpecial ? 'Sonderöffnung' : 'Regulär'}</span>
+            <span class="text-[10px] font-semibold px-2 py-0.5 bg-stone-100 rounded text-stone-600">${dayObj.isSpecial ? 'Event-Tag' : 'Regulär'}</span>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             <!-- Tagesschicht -->
-            <div class="bg-stone-50 p-3 rounded-lg border border-stone-200/60">
-              <div class="flex justify-between items-center mb-2">
-                <span class="font-bold text-xs text-heiderBurgundy flex items-center gap-1">
-                  <i class="fa-solid fa-sun text-amber-500"></i> Tag (10:30 - 15:00)
-                </span>
-                <span class="text-[11px] text-stone-500">Soll: ${weekData.soll[dayKey]?.tag || 0}</span>
+            <div class="bg-stone-50 p-2.5 rounded-lg border border-stone-200/80">
+              <div class="flex justify-between items-center mb-1.5">
+                <span class="font-bold text-xs text-[#6B1D2F]">☀️ Tag (ab 10:30)</span>
+                <span class="text-[10px] text-stone-500">Soll: ${weekData.soll[dayKey]?.tag || 0}</span>
               </div>
               
-              <div class="grid grid-cols-2 gap-1.5 mb-2">
-                <button onclick="updateShift('${dayKey}', 'tag', 'x')" class="py-1.5 px-2 rounded text-xs font-semibold border ${userShifts.tag === 'x' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-100'}">
-                  Service / Theke
+              <div class="grid grid-cols-2 gap-1 mb-2">
+                <button onclick="updateShift('${dayKey}', 'tag', 'x')" class="py-1 px-1 rounded text-[11px] font-bold border ${userShifts.tag === 'x' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-stone-700 border-stone-300'}">
+                  Service/Theke
                 </button>
-                <button onclick="updateShift('${dayKey}', 'tag', 'Kü')" class="py-1.5 px-2 rounded text-xs font-semibold border ${userShifts.tag === 'Kü' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-100'}">
+                <button onclick="updateShift('${dayKey}', 'tag', 'Kü')" class="py-1 px-1 rounded text-[11px] font-bold border ${userShifts.tag === 'Kü' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-stone-700 border-stone-300'}">
                   Küche
                 </button>
-                <button onclick="updateShift('${dayKey}', 'tag', 'Springer')" class="py-1.5 px-2 rounded text-xs font-semibold border ${userShifts.tag === 'Springer' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-100'}">
+                <button onclick="updateShift('${dayKey}', 'tag', 'Springer')" class="py-1 px-1 rounded text-[11px] font-bold border ${userShifts.tag === 'Springer' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-stone-700 border-stone-300'}">
                   Springer
                 </button>
-                <button onclick="updateShift('${dayKey}', 'tag', '-')" class="py-1.5 px-2 rounded text-xs font-semibold border ${userShifts.tag === '-' ? 'bg-stone-400 text-white border-stone-400' : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-100'}">
+                <button onclick="updateShift('${dayKey}', 'tag', '-')" class="py-1 px-1 rounded text-[11px] font-bold border ${userShifts.tag === '-' ? 'bg-stone-400 text-white border-stone-400' : 'bg-white text-stone-700 border-stone-300'}">
                   Nicht da
                 </button>
               </div>
 
-              <!-- Uhrzeit Auswahl -->
               ${userShifts.tag !== '-' ? `
-                <div class="mt-2">
-                  <label class="text-[10px] text-stone-500 font-medium block mb-1">Startzeit / Anmerkung:</label>
-                  <select onchange="updateShiftTime('${dayKey}', 'tag', this.value)" class="w-full text-xs p-1.5 bg-white border border-stone-300 rounded focus:outline-none">
+                <div>
+                  <label class="text-[9px] text-stone-500 block mb-0.5">Arbeitszeit / Ab Uhrzeit:</label>
+                  <select onchange="updateShiftTime('${dayKey}', 'tag', this.value)" class="w-full text-xs p-1 bg-white border border-stone-300 rounded focus:outline-none">
                     ${timeOptions.map(t => `<option value="${t}" ${userShifts.timeTag === t ? 'selected' : ''}>${t}</option>`).join('')}
                   </select>
                 </div>
@@ -488,34 +405,31 @@
             </div>
 
             <!-- Abendschicht -->
-            <div class="bg-stone-50 p-3 rounded-lg border border-stone-200/60">
-              <div class="flex justify-between items-center mb-2">
-                <span class="font-bold text-xs text-heiderBurgundy flex items-center gap-1">
-                  <i class="fa-solid fa-moon text-indigo-500"></i> Abend (15:00 - Ende)
-                </span>
-                <span class="text-[11px] text-stone-500">Soll: ${weekData.soll[dayKey]?.abend || 0}</span>
+            <div class="bg-stone-50 p-2.5 rounded-lg border border-stone-200/80">
+              <div class="flex justify-between items-center mb-1.5">
+                <span class="font-bold text-xs text-[#6B1D2F]">🌙 Abend (ab 15:00)</span>
+                <span class="text-[10px] text-stone-500">Soll: ${weekData.soll[dayKey]?.abend || 0}</span>
               </div>
               
-              <div class="grid grid-cols-2 gap-1.5 mb-2">
-                <button onclick="updateShift('${dayKey}', 'abend', 'x')" class="py-1.5 px-2 rounded text-xs font-semibold border ${userShifts.abend === 'x' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-100'}">
-                  Service / Theke
+              <div class="grid grid-cols-2 gap-1 mb-2">
+                <button onclick="updateShift('${dayKey}', 'abend', 'x')" class="py-1 px-1 rounded text-[11px] font-bold border ${userShifts.abend === 'x' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-stone-700 border-stone-300'}">
+                  Service/Theke
                 </button>
-                <button onclick="updateShift('${dayKey}', 'abend', 'Kü')" class="py-1.5 px-2 rounded text-xs font-semibold border ${userShifts.abend === 'Kü' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-100'}">
+                <button onclick="updateShift('${dayKey}', 'abend', 'Kü')" class="py-1 px-1 rounded text-[11px] font-bold border ${userShifts.abend === 'Kü' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-stone-700 border-stone-300'}">
                   Küche
                 </button>
-                <button onclick="updateShift('${dayKey}', 'abend', 'Springer')" class="py-1.5 px-2 rounded text-xs font-semibold border ${userShifts.abend === 'Springer' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-100'}">
+                <button onclick="updateShift('${dayKey}', 'abend', 'Springer')" class="py-1 px-1 rounded text-[11px] font-bold border ${userShifts.abend === 'Springer' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-stone-700 border-stone-300'}">
                   Springer
                 </button>
-                <button onclick="updateShift('${dayKey}', 'abend', '-')" class="py-1.5 px-2 rounded text-xs font-semibold border ${userShifts.abend === '-' ? 'bg-stone-400 text-white border-stone-400' : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-100'}">
+                <button onclick="updateShift('${dayKey}', 'abend', '-')" class="py-1 px-1 rounded text-[11px] font-bold border ${userShifts.abend === '-' ? 'bg-stone-400 text-white border-stone-400' : 'bg-white text-stone-700 border-stone-300'}">
                   Nicht da
                 </button>
               </div>
 
-              <!-- Uhrzeit Auswahl -->
               ${userShifts.abend !== '-' ? `
-                <div class="mt-2">
-                  <label class="text-[10px] text-stone-500 font-medium block mb-1">Startzeit / Anmerkung:</label>
-                  <select onchange="updateShiftTime('${dayKey}', 'abend', this.value)" class="w-full text-xs p-1.5 bg-white border border-stone-300 rounded focus:outline-none">
+                <div>
+                  <label class="text-[9px] text-stone-500 block mb-0.5">Arbeitszeit / Ab Uhrzeit:</label>
+                  <select onchange="updateShiftTime('${dayKey}', 'abend', this.value)" class="w-full text-xs p-1 bg-white border border-stone-300 rounded focus:outline-none">
                     ${timeOptions.map(t => `<option value="${t}" ${userShifts.timeAbend === t ? 'selected' : ''}>${t}</option>`).join('')}
                   </select>
                 </div>
@@ -552,35 +466,33 @@
       const weekKey = getWeekKey(currentWeekStart);
       const weekData = db[weekKey];
 
-      // Table Header
       const headerRow = document.getElementById('tableHeaderRow');
-      headerRow.innerHTML = `<th class="p-2.5 w-32 border-r border-stone-200">Mitarbeiter</th>`;
+      headerRow.innerHTML = `<th class="p-2 w-28 border-r border-stone-200">Mitarbeiter</th>`;
 
       daysOfWeek.forEach((dayObj, index) => {
         if (dayObj.isSpecial && !showSpecialDays) return;
         const dateStr = formatDateShort(getDateForDay(index));
         headerRow.innerHTML += `
-          <th class="p-2 text-center border-r border-stone-200 min-w-[90px]">
+          <th class="p-1.5 text-center border-r border-stone-200 min-w-[80px]">
             <div class="font-bold text-xs">${dayObj.label}</div>
-            <div class="text-[10px] text-heiderMuted">${dateStr}</div>
-            <div class="flex justify-around text-[9px] mt-1 text-stone-500 font-normal">
+            <div class="text-[10px] text-stone-500">${dateStr}</div>
+            <div class="flex justify-around text-[9px] mt-1 text-stone-400 font-normal">
               <span>Tag</span><span>Abend</span>
             </div>
           </th>
         `;
       });
 
-      // Table Body
       const tbody = document.getElementById('fullPlanTableBody');
       tbody.innerHTML = '';
 
       team.forEach(m => {
         const tr = document.createElement('tr');
-        tr.className = m.name === currentUser ? 'bg-amber-50/50 font-medium' : 'hover:bg-stone-50';
+        tr.className = m.name === currentUser ? 'bg-amber-50/60 font-medium' : 'hover:bg-stone-50';
 
-        let nameTd = `<td class="p-2.5 font-semibold text-heiderDark border-r border-stone-200 flex flex-col">
+        let nameTd = `<td class="p-2 font-bold text-[#2B2321] border-r border-stone-200 flex flex-col">
           <span>${m.name}</span>
-          <span class="text-[9px] text-heiderMuted font-normal">${m.role}</span>
+          <span class="text-[9px] text-stone-500 font-normal">${m.role}</span>
         </td>`;
 
         let daysTds = '';
@@ -590,8 +502,87 @@
 
           const formatShiftCell = (val, time) => {
             let badge = `<span class="text-stone-300">-</span>`;
-            if (val === 'x') badge = `<span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold">x</span>`;
-            if (val === 'Kü') badge = `<span class="px-1.5 py-0.5 bg-amber-100 text-amber-900 rounded font-bold">Kü</span>`;
+            if (val === 'x') badge = `<span class="px-1 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold">x</span>`;
+            if (val === 'Kü') badge = `<span class="px-1 py-0.5 bg-amber-100 text-amber-900 rounded font-bold">Kü</span>`;
             if (val === 'Springer') badge = `<span class="px-1 py-0.5 bg-blue-100 text-blue-800 rounded text-[9px]">S</span>`;
             
-            const timeHint = (time && time !== 'Standard (regulär)') ? `<span class="block text-[8px] text-stone-500 leading-none
+            const timeHint = (time && time !== 'Standard (regulär)') ? `<span class="block text-[8px] text-stone-500 leading-none mt-0.5">${time.replace('ab ', '')}</span>` : '';
+            return `<div class="text-center">${badge}${timeHint}</div>`;
+          };
+
+          daysTds += `
+            <td class="p-1.5 border-r border-stone-200 align-middle">
+              <div class="grid grid-cols-2 gap-0.5 text-xs">
+                ${formatShiftCell(userDay.tag, userDay.timeTag)}
+                ${formatShiftCell(userDay.abend, userDay.timeAbend)}
+              </div>
+            </td>
+          `;
+        });
+
+        tr.innerHTML = nameTd + daysTds;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function openSollModal() {
+      const weekKey = getWeekKey(currentWeekStart);
+      const weekData = db[weekKey];
+      const container = document.getElementById('sollModalContent');
+      container.innerHTML = '';
+
+      daysOfWeek.forEach((dayObj, index) => {
+        const dayKey = dayObj.key;
+        const dateStr = formatDateShort(getDateForDay(index));
+        const soll = weekData.soll[dayKey] || { tag: 0, abend: 0 };
+        const evt = weekData.events[dayKey] || '';
+
+        container.innerHTML += `
+          <div class="p-2.5 bg-stone-50 rounded border border-stone-200">
+            <div class="font-bold text-[#2B2321] mb-1">${dayObj.label}, ${dateStr}</div>
+            <div class="grid grid-cols-2 gap-2 mb-1.5">
+              <div>
+                <label class="block text-[9px] text-stone-500">Soll Tag:</label>
+                <input type="number" id="soll_${dayKey}_tag" value="${soll.tag}" min="0" class="w-full p-1 border rounded text-xs">
+              </div>
+              <div>
+                <label class="block text-[9px] text-stone-500">Soll Abend:</label>
+                <input type="number" id="soll_${dayKey}_abend" value="${soll.abend}" min="0" class="w-full p-1 border rounded text-xs">
+              </div>
+            </div>
+            <div>
+              <label class="block text-[9px] text-stone-500">Veranstaltung / Event:</label>
+              <input type="text" id="evt_${dayKey}" value="${evt}" placeholder="z. B. Lesung 45 Pers." class="w-full p-1 border rounded text-xs">
+            </div>
+          </div>
+        `;
+      });
+
+      document.getElementById('sollModal').classList.remove('hidden');
+    }
+
+    function closeSollModal() {
+      document.getElementById('sollModal').classList.add('hidden');
+    }
+
+    function saveSollSettings() {
+      const weekKey = getWeekKey(currentWeekStart);
+      daysOfWeek.forEach(dayObj => {
+        const dayKey = dayObj.key;
+        const tagVal = parseInt(document.getElementById(`soll_${dayKey}_tag`).value) || 0;
+        const abendVal = parseInt(document.getElementById(`soll_${dayKey}_abend`).value) || 0;
+        const evtVal = document.getElementById(`evt_${dayKey}`).value;
+
+        db[weekKey].soll[dayKey] = { tag: tagVal, abend: abendVal };
+        db[weekKey].events[dayKey] = evtVal;
+      });
+
+      saveDB();
+      closeSollModal();
+      renderApp();
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
