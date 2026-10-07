@@ -5,7 +5,16 @@ function serverNow(){return Date.now()+cloudServerOffset;}
 function berlinToday(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(serverNow()));}
 function shiftDateKey(week,day){const i=['mo','di','mi','do','fr','sa','so'].indexOf(day);const d=new Date(week+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+i);return d.toISOString().slice(0,10);}
 function isPastShift(week,day){return shiftDateKey(week,day)<berlinToday();}
-function closeWeekNotices(){document.querySelectorAll('#appMain details').forEach(el=>el.open=false);document.getElementById('noteEditBox').classList.add('hidden');}
+function isShiftLocked(week,day,period){
+ const date=shiftDateKey(week,day),today=berlinToday();
+ if(date<today)return true;
+ if(date!==today||period!=='tag')return false;
+ const hour=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Berlin',hour:'2-digit',hourCycle:'h23'}).format(new Date(serverNow())));
+ return hour>=15;
+}
+function shiftLockText(week,day){return isPastShift(week,day)?'Abgeschlossen · Nur ansehen':'Tagschicht ab 15:00 Uhr geschlossen · Nur ansehen';}
+function toggleWeekNotes(){const notes=document.getElementById('weekNotes');notes.open=!notes.open;document.getElementById('weekNotesButton').setAttribute('aria-expanded',String(notes.open));}
+function closeWeekNotices(){document.querySelectorAll('#appMain details').forEach(el=>el.open=false);document.getElementById('weekNotesButton').setAttribute('aria-expanded','false');document.getElementById('noteEditBox').classList.add('hidden');}
 
 function personName(id){return team.find(p=>p.id===id)?.name || 'Nicht aktives Profil';}
 function shiftRevision(id,day,period,week=getWeekKey(currentWeekStart)){return cloudShiftRevisions.get([week,id,day,period].join('|'))||0;}
@@ -56,7 +65,7 @@ function dayMarkup(edit){
 }
 function renderClaimAction(day,period){
  const person=team.find(p=>p.name===currentUser),data=db[getWeekKey(currentWeekStart)],value=data?.shifts[currentUser]?.[day]?.[period];if(!person)return '';
- if(isPastShift(getWeekKey(currentWeekStart),day))return '<p class="past-label">Abgeschlossen · Nur ansehen</p>';
+ if(isShiftLocked(getWeekKey(currentWeekStart),day,period))return `<p class="past-label">${shiftLockText(getWeekKey(currentWeekStart),day)}</p>`;
  const pending=pendingFor(person.id,day,period);
  if(isScheduled(value))return pending?`<p class="hint">Übernahme angefragt. Bis zur Bestätigung bleibt die Eintragung bestehen.</p><button class="wide secondary" onclick="cancelTransfer('${pending.id}')">Anfrage zurückziehen</button>`:`<button class="wide secondary" onclick="openWithdrawal('${day}','${period}')">Eingetragen · Ändern</button>`;
  return `<button class="wide primary" onclick="quickClaim('${day}','${period}')">${person.id===cloudActor?.id?'Mich':'Ausgewählte Person'} eintragen</button>`;
@@ -64,16 +73,23 @@ function renderClaimAction(day,period){
 function renderMyShiftsTab(){
  const data=db[getWeekKey(currentWeekStart)],person=team.find(p=>p.name===currentUser);if(!data||!person)return;
  document.getElementById('myShiftsList').innerHTML=visibleDays().map(d=>`<article class="my-day"><h3>${d.label}, ${formatDateShort(getDateForDay(daysOfWeek.indexOf(d)))}</h3>${['tag','abend'].map(period=>{
- const past=isPastShift(getWeekKey(currentWeekStart),d.key),value=data.shifts[person.name]?.[d.key]?.[period]||'-',answered=shiftAnswered(getWeekKey(currentWeekStart),person.id,d.key,period),pending=pendingFor(person.id,d.key,period);
- return `<div class="my-period"><strong>${period==='tag'?'Tag':'Abend'} · ${answered?escapeHtml(shiftRoleLabel(value)):'Noch offen'}</strong>${past?'<p class="past-label">Abgeschlossen · Nur ansehen</p>':''}${pending?`<p class="transfer-status">${escapeHtml(personName(pending.taker_id))} angefragt · Bestätigung offen</p>`:''}<div class="my-buttons"><button class="${value==='se'?'selected':''}" ${past||isScheduled(value)?'disabled':''} onclick="updateShift('${d.key}','${period}','se')">Service/Theke</button><button class="${value==='kü'?'selected':''}" ${past||isScheduled(value)?'disabled':''} onclick="updateShift('${d.key}','${period}','kü')">Küche</button><button ${past||(value==='-'&&answered)?'disabled':''} onclick="updateShift('${d.key}','${period}','-')">${isScheduled(value)?'Ändern …':'Frei bestätigen'}</button></div></div>`;
+ const past=isShiftLocked(getWeekKey(currentWeekStart),d.key,period),value=data.shifts[person.name]?.[d.key]?.[period]||'-',answered=shiftAnswered(getWeekKey(currentWeekStart),person.id,d.key,period),pending=pendingFor(person.id,d.key,period);
+ return `<div class="my-period"><strong>${period==='tag'?'Tag':'Abend'} · ${answered?escapeHtml(shiftRoleLabel(value)):'Noch offen'}</strong>${past?`<p class="past-label">${shiftLockText(getWeekKey(currentWeekStart),d.key)}</p>`:''}${pending?`<p class="transfer-status">${escapeHtml(personName(pending.taker_id))} angefragt · Bestätigung offen</p>`:''}<div class="my-buttons"><button class="${value==='se'?'selected':''}" ${past||isScheduled(value)?'disabled':''} onclick="updateShift('${d.key}','${period}','se')">Service/Theke</button><button class="${value==='kü'?'selected':''}" ${past||isScheduled(value)?'disabled':''} onclick="updateShift('${d.key}','${period}','kü')">Küche</button><button ${past||(value==='-'&&answered)?'disabled':''} onclick="updateShift('${d.key}','${period}','-')">${isScheduled(value)?'Ändern …':'Frei bestätigen'}</button></div></div>`;
  }).join('')}</article>`).join('');
 }
 function renderApp(){
  const week=getWeekKey(currentWeekStart);loadWeekData();
- document.getElementById('weekTitle').textContent=currentWeekStart.toLocaleDateString('de-DE',{day:'numeric',month:'long'});
- const end=getDateForDay(6);document.getElementById('weekRange').textContent=`${formatDateShort(currentWeekStart)}–${formatDateShort(end)}${end.getFullYear()}`;
- document.getElementById('noteDisplay').textContent=db[week].note||'Keine Hinweise für diese Woche.';
- renderDayViews();renderMyShiftsTab();renderSpringer();renderUndo();renderDeadline();
+ const end=getDateForDay(6);
+ const short=date=>date.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
+ document.getElementById('weekTitle').textContent=currentWeekStart.getFullYear()===end.getFullYear()?`${short(currentWeekStart)} – ${short(end)}${end.getFullYear()}`:`${short(currentWeekStart)}${currentWeekStart.getFullYear()} – ${short(end)}${end.getFullYear()}`;
+ const thursday=new Date(getWeekKey(currentWeekStart)+'T12:00:00Z');thursday.setUTCDate(thursday.getUTCDate()+3);
+ const isoYear=thursday.getUTCFullYear(),yearStart=new Date(Date.UTC(isoYear,0,1,12));
+ const kw=Math.ceil(((thursday-yearStart)/86400000+1)/7);
+ document.getElementById('weekRange').textContent=`Kalenderwoche ${kw} · ${isoYear}`;
+ document.getElementById('noteDisplay').textContent=db[week].note||'Hier können Pia und Nelly Informationen für die ganze Woche hinterlegen, zum Beispiel Veranstaltungen oder besondere Aufgaben. Reservierungen werden separat pro Tag und Schicht erfasst.';
+ document.getElementById('weekNotesButton').textContent=db[week].note?.trim()?'Hinweise · vorhanden':'Hinweise';
+ document.getElementById('reservationEditButton').hidden=!cloudActor?.is_admin;
+ renderDayViews();renderMyShiftsTab();renderSpringer();renderUndo();renderDeadline();renderIncomingRequests();renderCapacityWarning();
 }
 function renderDeadline(){
  const d=cloudDeadline,el=document.getElementById('deadlinePanel');
@@ -86,7 +102,7 @@ function renderDeadline(){
 }
 async function openWithdrawal(day,period){
  if(cloudBusy||!cloudActor)return;
- if(isPastShift(getWeekKey(currentWeekStart),day)){cloudStatus('Vergangene Tage können nicht bearbeitet werden.',true);return;}
+ if(isShiftLocked(getWeekKey(currentWeekStart),day,period)){cloudStatus(shiftLockText(getWeekKey(currentWeekStart),day),true);return;}
  const person=team.find(p=>p.name===currentUser),week=getWeekKey(currentWeekStart);if(!person||!isScheduled(db[week]?.shifts[currentUser]?.[day]?.[period]))return;
  withdrawalContext={week,id:person.id,day,period,revision:shiftRevision(person.id,day,period),late:null};
  const context=withdrawalContext;modalReturnFocus=document.activeElement;
@@ -107,13 +123,13 @@ async function confirmWithdrawal(){
  if(c.late&&!reason){document.getElementById('withdrawError').textContent='Bitte einen Grund auswählen oder Ersatz anfragen.';return;}
  const button=document.getElementById('withdrawSubmit');button.disabled=true;
  try{
- const saved=await cloudWrite('withdraw_shift',{p_week:c.week,p_user:c.id,p_day:c.day,p_period:c.period,p_revision:c.revision,p_message:message,p_reason:reason},data=>{lastUndo={...data,week:c.week};});
+ const saved=await cloudWrite('withdraw_shift',{p_week:c.week,p_user:c.id,p_day:c.day,p_period:c.period,p_revision:c.revision,p_message:message,p_reason:reason},data=>{lastUndo={...data,week:c.week,day:c.day,period:c.period};});
  if(saved){closeWithdrawal();renderUndo();cloudStatus(lastUndo.late?'Ausgetragen · Admin-Meldung nach zwei Minuten.':'Ausgetragen · Keine Admin-Meldung.');}
  else{document.getElementById('withdrawError').textContent='Änderung nicht bestätigt. Bitte Fenster schließen und mit dem aktuellen Plan erneut öffnen.';}
  }finally{button.disabled=false;}
 }
 function renderUndo(){
- const el=document.getElementById('undoNotice');el.hidden=!lastUndo||serverNow()>=Date.parse(lastUndo.undo_until);
+ const el=document.getElementById('undoNotice');el.hidden=!lastUndo||serverNow()>=Date.parse(lastUndo.undo_until)||(lastUndo&&isShiftLocked(lastUndo.week,lastUndo.day,lastUndo.period));
  if(!el.hidden){el.className='undo-toast';el.innerHTML=`<span>Ausgetragen · 2 Minuten rückgängig möglich</span><button onclick="undoLastWithdrawal()">Rückgängig</button>`;}
 }
 async function undoLastWithdrawal(){
@@ -122,7 +138,7 @@ async function undoLastWithdrawal(){
 function openTransferFromWithdrawal(){if(!withdrawalContext)return;const c={...withdrawalContext};closeWithdrawal();openTransfer(c);}
 function openTransfer(context,target){
  if(!context||cloudBusy)return;
- if(isPastShift(context.week,context.day)){cloudStatus('Vergangene Tage können nicht bearbeitet werden.',true);return;}
+ if(isShiftLocked(context.week,context.day,context.period)){cloudStatus(shiftLockText(context.week,context.day),true);return;}
  transferContext=context;modalReturnFocus=document.activeElement;
  const candidates=team.filter(p=>p.id!==context.id&&!['se','kü','th','u','k'].includes(db[context.week]?.shifts[p.name]?.[context.day]?.[context.period]||'-'));
  const pool=cloudPool.filter(p=>p.available);
@@ -161,17 +177,32 @@ function transferMarkup(t){
  const ownTarget=t.taker_id===cloudActor?.id;
  return `<article class="request-card"><strong>${escapeHtml(personName(t.giver_id))} → ${escapeHtml(personName(t.taker_id))}</strong><p class="hint">${shortDay[t.day]} · ${t.period==='tag'?'Tag':'Abend'} · ${escapeHtml(shiftRoleLabel(t.shift_value))}</p><p>${labels[status]}</p>${t.note?`<p class="hint">${escapeHtml(t.note)}</p>`:''}${status==='pending'&&ownTarget?`<div class="actions"><button class="primary" onclick="respondTransfer('${t.id}',true)">Übernehmen</button><button onclick="respondTransfer('${t.id}',false)">Ablehnen</button></div>`:''}${t.status==='pending'&&(t.giver_id===cloudActor?.id||cloudActor?.is_admin)?`<button onclick="cancelTransfer('${t.id}')">Anfrage zurückziehen</button>`:''}</article>`;
 }
-async function respondTransfer(id,accept){const saved=await cloudWrite('respond_transfer',{p_id:id,p_accept:accept});if(saved){const t=cloudTransfers.find(t=>t.id===id);cloudStatus(t?.status==='stale'?'Plan geändert – Übernahme nicht ausgeführt.':accept?'Übernahme bestätigt.':'Übernahme abgelehnt.');}}
+function renderIncomingRequests(){
+ const el=document.getElementById('incomingRequests'),badge=document.getElementById('incomingCount');
+ const incoming=cloudIncoming.filter(t=>t.status==='pending'&&t.taker_id===cloudActor?.id&&team.some(p=>p.id===t.giver_id));
+ el.hidden=!incoming.length;badge.hidden=!incoming.length;badge.textContent=incoming.length||'';
+ if(!incoming.length){el.innerHTML='';return;}
+ el.innerHTML=`<h2>Du wurdest angefragt · ${incoming.length}</h2><p class="hint">Bitte bestätige oder lehne die Übernahme ab. Bis dahin bleibt die bisherige Person eingetragen.</p>`+incoming.map(t=>{
+ const date=new Date(shiftDateKey(t.week,t.day)+'T12:00:00Z').toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric',timeZone:'Europe/Berlin'}),locked=isShiftLocked(t.week,t.day,t.period);
+ return `<article class="incoming-item"><strong>${escapeHtml(personName(t.giver_id))} fragt dich an</strong><p>${escapeHtml(date)} · ${t.period==='tag'?'Tagschicht':'Abendschicht'} · ${escapeHtml(shiftRoleLabel(t.shift_value))}</p>${t.note?`<p class="hint">${escapeHtml(t.note)}</p>`:''}${locked?'<p class="past-label">Schicht bereits abgeschlossen · Übernahme nicht mehr möglich</p>':''}<div class="actions"><button class="primary" ${locked?'disabled':''} onclick="respondTransfer('${t.id}',true)">Übernehmen</button><button class="secondary" onclick="respondTransfer('${t.id}',false)">Ablehnen</button></div></article>`;
+ }).join('');
+}
+async function respondTransfer(id,accept){
+ const saved=await cloudWrite('respond_transfer',{p_id:id,p_accept:accept});if(!saved)return;
+ let t=cloudTransfers.find(t=>t.id===id);
+ if(!t){const result=await cloudClient.from('shift_transfers').select('status').eq('id',id).maybeSingle();if(!result.error)t=result.data;}
+ cloudStatus(t?.status==='stale'?'Plan geändert – Übernahme nicht ausgeführt.':t?.status==='accepted'?'Übernahme bestätigt.':t?.status==='rejected'?'Übernahme abgelehnt.':'Anfrage bearbeitet. Bitte aktuellen Status prüfen.');
+}
 function cancelTransfer(id){return cloudWrite('cancel_transfer',{p_id:id});}
 function renderInbox(){
- document.getElementById('unreadCount').textContent=cloudInbox.unread||0;
+ const count=cloudInbox.unread||0;document.getElementById('unreadCount').textContent=count;document.getElementById('unreadCount').hidden=count===0;document.getElementById('inboxButton').classList.toggle('has-unread',count>0);document.getElementById('inboxButton').setAttribute('aria-label',count?'Nachrichten, '+count+' ungelesen':'Nachrichten');
  document.getElementById('inboxMessages').innerHTML=cloudInbox.items?.length?cloudInbox.items.map(n=>`<article class="message-card"><strong>${escapeHtml(n.title)}</strong><p class="hint">${escapeHtml(new Date(n.created_at).toLocaleString('de-DE'))} · ${n.is_read?'Gelesen':'Neu'}</p><p class="message-body">${escapeHtml(n.message)}</p>${n.kind==='transfer'?`<button onclick="openRequestWeek('${n.week}')">Anfragen dieser Woche öffnen</button>`:''}${!n.is_read?`<button onclick="readNotification('${n.id}')">Als gelesen markieren</button>`:''}</article>`).join(''):'<p>Noch keine Nachrichten.</p>';
 }
 async function openRequestWeek(week){if(cloudBusy)return;closeInbox();closeWithdrawal();closeTransfer();closeSollModal();document.getElementById('noteEditBox').classList.add('hidden');currentWeekStart=new Date(week+'T12:00:00');cloudLoadedWeek=null;cloudDeadline=null;cloudRule=null;loadWeekData();switchTab('springer');renderApp();await cloudSync();}
 function askSpringer(target){
  const person=team.find(p=>p.name===currentUser);if(!person)return;
  const week=getWeekKey(currentWeekStart),data=db[week],options=[];
- for(const d of daysOfWeek)for(const period of ['tag','abend'])if(!isPastShift(week,d.key)&&isScheduled(data.shifts[person.name]?.[d.key]?.[period])&&!pendingFor(person.id,d.key,period))options.push({day:d.key,period});
+ for(const d of daysOfWeek)for(const period of ['tag','abend'])if(!isShiftLocked(week,d.key,period)&&isScheduled(data.shifts[person.name]?.[d.key]?.[period])&&!pendingFor(person.id,d.key,period))options.push({day:d.key,period});
  if(!options.length){cloudStatus('Du hast in dieser Woche keine Schicht, für die du Ersatz anfragen kannst.',true);return;}
  // Konkrete Schicht zuerst auswählen. Keine automatische Wahl einer beliebigen Schicht.
  transferContext={week,id:person.id,target,choosing:true};modalReturnFocus=document.activeElement;
@@ -200,3 +231,18 @@ function openSollModal(){
 }
 
 if(window.ResizeObserver)new ResizeObserver(entries=>document.documentElement.style.setProperty('--header-height',entries[0].target.getBoundingClientRect().height+'px')).observe(document.querySelector('.app-header'));
+
+if(window.ResizeObserver)new ResizeObserver(entries=>document.documentElement.style.setProperty('--nav-height',entries[0].target.getBoundingClientRect().height+'px')).observe(document.querySelector('.bottom-nav'));
+
+let lastShiftClockKey='';
+function refreshShiftClock(){const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Berlin',hour:'2-digit',hourCycle:'h23'}).format(new Date(serverNow()));const clockKey=berlinToday()+'|'+(Number(parts)>=15);if(clockKey!==lastShiftClockKey){lastShiftClockKey=clockKey;if(currentUser&&db[getWeekKey(currentWeekStart)]){renderDayViews();renderMyShiftsTab();renderUndo();renderIncomingRequests();}}}
+setInterval(refreshShiftClock,1000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshShiftClock();});
+
+function renderCapacityWarning(){
+ const el=document.getElementById('capacityWarning');el.hidden=!cloudCapacity.length;if(!cloudCapacity.length){el.innerHTML='';return;}
+ const open=el.querySelector('details')?.open||false;
+ const total=cloudCapacity.reduce((n,a)=>n+a.missing,0);
+ el.innerHTML=`<strong>⚠ Personal fehlt trotz abgelaufener Rückmeldefrist</strong><p>${cloudCapacity.length} Schichten unterbesetzt · ${total} Plätze offen</p><details ${open?'open':''}><summary>Betroffene Schichten anzeigen</summary>${cloudCapacity.map(a=>{const date=new Date(a.date+'T12:00:00Z').toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',timeZone:'Europe/Berlin'});return `<div class="capacity-row"><span>${escapeHtml(date)} · ${a.period==='tag'?'Tag':'Abend'} · ${a.filled}/${a.required} besetzt</span><button onclick="openCapacityWeek('${a.week}','${a.day}')">${a.missing} ${a.missing===1?'Platz offen':'Plätze offen'} →</button></div>`;}).join('')}</details>`;
+}
+async function openCapacityWeek(week,day){if(cloudBusy)return;closeWithdrawal();closeTransfer();closeSollModal();closeWeekNotices();focusDay=day;currentWeekStart=new Date(week+'T12:00:00');cloudLoadedWeek=null;cloudDeadline=null;cloudRule=null;loadWeekData();switchTab('cards');renderApp();await cloudSync();}

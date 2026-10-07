@@ -25,8 +25,17 @@ function demoDeadline(week){
  const hours=Number(offset.replace('GMT',''));
  return {week:start.toISOString().slice(0,10),deadline:new Date(thursday.getTime()+(24-hours)*3600000-1000).toISOString()};
 }
-function demoNotice(kind,audience,title,message,week,recipient=null,delay=0){const n={id:demoId(),kind,audience,title,message,week,recipient_id:recipient,created_at:new Date().toISOString(),available_at:new Date(Date.now()+delay).toISOString()};demoStore.notifications.push(n);return n.id;}
-function demoInbox(){const actor=demoActor();const items=demoStore.notifications.filter(n=>Date.parse(n.available_at)<=Date.now()&&(n.audience==='team'||n.audience==='admins'&&actor.is_admin||n.audience==='user'&&n.recipient_id===actor.id)).map(n=>({...n,is_read:demoStore.notification_reads.some(r=>r.notification_id===n.id&&r.user_id===actor.id)})).sort((a,b)=>b.created_at.localeCompare(a.created_at));return {items:items.slice(0,100),unread:items.filter(n=>!n.is_read).length};}
+function demoNotice(kind,audience,title,message,week,recipient=null,delay=0,event=null){const n={id:demoId(),transfer_id:event,kind,audience,title,message,week,recipient_id:recipient,created_at:new Date().toISOString(),available_at:new Date(Date.now()+delay).toISOString()};demoStore.notifications.push(n);return n.id;}
+function demoInbox(){
+ const actor=demoActor();const visible=demoStore.notifications.filter(n=>Date.parse(n.available_at)<=Date.now()&&(n.audience==='team'||n.audience==='admins'&&actor.is_admin||n.audience==='user'&&n.recipient_id===actor.id));
+ // Link older local confirmation pairs only when their exact timestamp matches.
+ for(const n of visible)if(!n.transfer_id&&n.title==='Übernahme bestätigt'){
+  const admin=visible.find(a=>a.title==='Schichtübernahme bestätigt'&&a.week===n.week&&a.created_at===n.created_at&&a.message.includes(actor.name+' → ')&&n.message.startsWith(a.message.split(' → ')[1].split(' · ')[0]+' übernimmt'));
+  if(admin){n.transfer_id=admin.id;admin.transfer_id=admin.id;}
+ }
+ const groups=new Map();for(const n of visible){const key=n.transfer_id||n.id;if(!groups.has(key)||n.audience==='admins')groups.set(key,n);}
+ const items=[...groups.values()].map(n=>({...n,is_read:demoStore.notification_reads.some(r=>r.notification_id===n.id&&r.user_id===actor.id)})).sort((a,b)=>b.created_at.localeCompare(a.created_at));return {items:items.slice(0,100),unread:items.filter(n=>!n.is_read).length};
+}
 function demoReplyStatus(week){
  const rule=demoDeadline(week),missing_people=[];let total=0,answered=0;
  for(const person of demoStore.profiles.filter(p=>p.active)){
@@ -45,12 +54,13 @@ function demoReplyStatus(week){
 function demoEffective(t){if(t.status!=='pending')return t.status;const s=demoShift(t.week,t.giver_id,t.day,t.period),target=demoShift(t.week,t.taker_id,t.day,t.period);return s?.revision===t.source_revision&&target?.revision===t.target_revision&&s?.value===t.shift_value?'pending':'stale';}
 function demoExecute(name,a){
  const actor=demoActor();demoAssert(actor);
+ if(name==='get_capacity_alerts')return demoCapacityAlerts(a.p_week);
  if(name==='get_reply_deadline')return demoReplyStatus(a.p_week);
  if(name==='get_change_rule'){const rule=demoDeadline(a.p_week);return {...rule,late:Date.now()>Date.parse(rule.deadline),server_now:new Date().toISOString()};}
  if(name==='get_notifications')return demoInbox();
  if(name==='mark_notification_read'){demoAssert(demoInbox().items.some(n=>n.id===a.p_id));if(!demoStore.notification_reads.some(r=>r.notification_id===a.p_id&&r.user_id===actor.id))demoStore.notification_reads.push({notification_id:a.p_id,user_id:actor.id});return null;}
  if(name==='save_shift'||name==='withdraw_shift'){
- demoAssert(!isPastShift(a.p_week,a.p_day),'Vergangene Tage können nicht bearbeitet werden','22023');
+ demoAssert(!isShiftLocked(a.p_week,a.p_day,a.p_period),'Schicht ist abgeschlossen: vergangener Tag oder Tagschicht ab 15:00 Uhr','22023');
  demoOwn(a.p_user);const s=demoShift(a.p_week,a.p_user,a.p_day,a.p_period,true);demoAssert(s.revision===a.p_revision,'Zwischenzeitlich geändert','40001');
  if(name==='save_shift'){
  demoAssert(['-','se','kü','th','u','k','f'].includes(a.p_value),'Ungültige Eingabe','22023');
@@ -65,13 +75,13 @@ function demoExecute(name,a){
  const undo={id:demoId(),actor_id:actor.id,week:a.p_week,user_id:a.p_user,day:a.p_day,period:a.p_period,old_value:old,after_revision:s.revision,undo_until:new Date(Date.now()+120000).toISOString(),notification_id:notice,used:false};demoStore.undos.push(undo);return {id:undo.id,undo_until:undo.undo_until,late};
  }
  if(name==='undo_withdrawal'){
- const u=demoStore.undos.find(u=>u.id===a.p_id&&u.actor_id===actor.id);demoAssert(u);demoAssert(!u.used&&Date.now()<Date.parse(u.undo_until),'Rückgängig-Frist abgelaufen','22023');demoAssert(!isPastShift(u.week,u.day),'Vergangene Tage können nicht bearbeitet werden','22023');const s=demoShift(u.week,u.user_id,u.day,u.period);demoAssert(s?.revision===u.after_revision&&s.value==='-','Schicht wurde inzwischen geändert','40001');s.value=u.old_value;s.revision++;u.used=true;demoStore.notifications=demoStore.notifications.filter(n=>n.id!==u.notification_id);return null;
+ const u=demoStore.undos.find(u=>u.id===a.p_id&&u.actor_id===actor.id);demoAssert(u);demoAssert(!u.used&&Date.now()<Date.parse(u.undo_until),'Rückgängig-Frist abgelaufen','22023');demoAssert(!isShiftLocked(u.week,u.day,u.period),'Schicht ist abgeschlossen: vergangener Tag oder Tagschicht ab 15:00 Uhr','22023');const s=demoShift(u.week,u.user_id,u.day,u.period);demoAssert(s?.revision===u.after_revision&&s.value==='-','Schicht wurde inzwischen geändert','40001');s.value=u.old_value;s.revision++;u.used=true;demoStore.notifications=demoStore.notifications.filter(n=>n.id!==u.notification_id);return null;
  }
  if(name==='save_springer'){
  demoOwn(a.p_user);let p=demoStore.springer_pool.find(p=>p.week===a.p_week&&p.user_id===a.p_user);demoAssert((p?.revision||0)===a.p_revision,'Zwischenzeitlich geändert','40001');demoAssert(a.p_note.length<=300,'Hinweis zu lang','22023');if(!p){p={week:a.p_week,user_id:a.p_user,revision:0};demoStore.springer_pool.push(p);}Object.assign(p,{available:a.p_available,note:a.p_note,revision:p.revision+1});return null;
  }
  if(name==='request_transfer'){
- demoAssert(!isPastShift(a.p_week,a.p_day),'Vergangene Tage können nicht bearbeitet werden','22023');
+ demoAssert(!isShiftLocked(a.p_week,a.p_day,a.p_period),'Schicht ist abgeschlossen: vergangener Tag oder Tagschicht ab 15:00 Uhr','22023');
  demoOwn(a.p_user);demoAssert(a.p_user!==a.p_target&&demoStore.profiles.some(p=>p.id===a.p_target&&p.active),'Ungültiger Ersatz','22023');
  const s=demoShift(a.p_week,a.p_user,a.p_day,a.p_period),target=demoShift(a.p_week,a.p_target,a.p_day,a.p_period,true);
  demoAssert(s?.revision===a.p_revision,'Zwischenzeitlich geändert','40001');demoAssert(isScheduled(s.value),'Keine eingetragene Schicht','22023');demoAssert(!['se','kü','th','u','k'].includes(target.value),'Ersatz bereits eingetragen oder abwesend','22023');
@@ -83,9 +93,9 @@ function demoExecute(name,a){
  if(name==='respond_transfer'){
  const t=demoStore.shift_transfers.find(t=>t.id===a.p_id);demoAssert(t&&t.taker_id===actor.id,'Nur die angefragte Person kann bestätigen');demoAssert(t.status==='pending','Anfrage nicht mehr offen','40001');
  if(demoEffective(t)==='stale'){t.status='stale';return null;}
- if(a.p_accept){demoAssert(!isPastShift(t.week,t.day),'Vergangene Tage können nicht bearbeitet werden','22023');const s=demoShift(t.week,t.giver_id,t.day,t.period),target=demoShift(t.week,t.taker_id,t.day,t.period);s.value='-';s.revision++;target.value=t.shift_value;target.revision++;t.status='accepted';if(Date.now()>Date.parse(demoDeadline(t.week).deadline))demoNotice('transfer','admins','Schichtübernahme bestätigt',personName(t.giver_id)+' → '+personName(t.taker_id)+' · '+t.day+' · '+t.period,t.week);}
+ if(a.p_accept){demoAssert(!isShiftLocked(t.week,t.day,t.period),'Schicht ist abgeschlossen: vergangener Tag oder Tagschicht ab 15:00 Uhr','22023');const s=demoShift(t.week,t.giver_id,t.day,t.period),target=demoShift(t.week,t.taker_id,t.day,t.period);s.value='-';s.revision++;target.value=t.shift_value;target.revision++;t.status='accepted';if(Date.now()>Date.parse(demoDeadline(t.week).deadline))demoNotice('transfer','admins','Schichtübernahme bestätigt',personName(t.giver_id)+' → '+personName(t.taker_id)+' · '+t.day+' · '+t.period,t.week,null,0,t.id);}
  else t.status='rejected';
- demoNotice('transfer','user',a.p_accept?'Übernahme bestätigt':'Übernahme abgelehnt',personName(t.taker_id)+(a.p_accept?' übernimmt deine Schicht.':' kann nicht übernehmen. Bitte anderen Ersatz anfragen.'),t.week,t.giver_id);return null;
+ demoNotice('transfer','user',a.p_accept?'Übernahme bestätigt':'Übernahme abgelehnt',personName(t.taker_id)+(a.p_accept?' übernimmt deine Schicht.':' kann nicht übernehmen. Bitte anderen Ersatz anfragen.'),t.week,t.giver_id,0,t.id);return null;
  }
  if(name==='cancel_transfer'){const t=demoStore.shift_transfers.find(t=>t.id===a.p_id);demoAssert(t&&t.status==='pending'&&(t.giver_id===actor.id||actor.is_admin));t.status='cancelled';return null;}
  if(name==='save_week_note'||name==='save_week_settings'){
@@ -118,3 +128,17 @@ async function switchDemoPerson(id){
 }
 async function resetDemo(){if(cloudBusy)return;localStorage.removeItem(DEMO_KEY);await startDemo();cloudStatus('Testdaten zurückgesetzt.');}
 function exitDemo(){if(cloudBusy)return;sessionStorage.removeItem('heiders_test_active');if(location.hash==='#test')history.replaceState(null,'',location.pathname+location.search);location.reload();}
+
+function demoCapacityAlerts(selected){
+ const today=berlinToday(),d=new Date(today+'T12:00:00Z');d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7));const monday=d.toISOString().slice(0,10);d.setUTCDate(d.getUTCDate()+7);const next=d.toISOString().slice(0,10),alerts=[];
+ for(const week of new Set([selected,monday,next])){
+  if(Date.now()<=Date.parse(demoDeadline(week).deadline))continue;
+  const settings=demoStore.week_settings.find(s=>s.week===week)?.requirements||cloudBlankWeek().soll;
+  for(const day of daysOfWeek)for(const period of ['tag','abend']){
+   if(isShiftLocked(week,day.key,period))continue;
+   const required=Number(settings[day.key]?.[period])||0,filled=demoStore.shifts.filter(s=>s.week===week&&s.day===day.key&&s.period===period&&isScheduled(s.value)&&demoStore.profiles.some(p=>p.id===s.user_id&&p.active)).length;
+   if(filled<required)alerts.push({week,day:day.key,period,date:shiftDateKey(week,day.key),required,filled,missing:required-filled});
+  }
+ }
+ alerts.sort((a,b)=>a.date.localeCompare(b.date)||Number(a.period==='abend')-Number(b.period==='abend'));return {alerts,server_now:new Date().toISOString()};
+}

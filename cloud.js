@@ -3,7 +3,7 @@ let cloudClient, cloudActor, cloudSession, cloudBusy = false, cloudRequest = 0;
 let cloudNoteRevision = 0, cloudSettingsRevision = 0, cloudEditWeek = null;
 let cloudShiftRevisions = new Map();
 let cloudLoadedWeek = null;
-let cloudRule=null, cloudTransfers=[],cloudPool=[],cloudServerOffset=0;
+let cloudCapacity=[],cloudIncoming=[],cloudRule=null, cloudTransfers=[],cloudPool=[],cloudServerOffset=0;
 let cloudDeadline=null,cloudInbox={items:[],unread:0},withdrawalContext=null,modalReturnFocus=null;
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -25,7 +25,7 @@ function cloudBlankWeek() {
   return {events:{},resTag:{},resAbend:{},soll:{mo:{tag:0,abend:0},di:{tag:2,abend:3},mi:{tag:2,abend:3},do:{tag:2,abend:2},fr:{tag:2,abend:3},sa:{tag:2,abend:3},so:{tag:0,abend:0}},note:'',shifts:Object.create(null),noteRevision:0,settingsRevision:0};
 }
 function cloudClear() {
-  cloudRequest++;cloudLoadedWeek=null;cloudDeadline=null;cloudInbox={items:[],unread:0};cloudTransfers=[];cloudPool=[];cloudRule=null;closeWithdrawal();closeInbox();closeTransfer();
+  cloudRequest++;cloudLoadedWeek=null;cloudDeadline=null;cloudInbox={items:[],unread:0};cloudTransfers=[];cloudIncoming=[];cloudCapacity=[];cloudPool=[];cloudRule=null;closeWithdrawal();closeInbox();closeTransfer();
   cloudActor=null; cloudSession=null; currentUser=null; team=[]; db={}; cloudShiftRevisions.clear();
   document.getElementById('appMain').hidden=true;
   document.getElementById('adminUserSelectWrapper').classList.add('hidden');
@@ -46,7 +46,9 @@ async function cloudSync() {
       cloudClient.rpc('get_notifications'),
       cloudClient.from('shift_transfers').select('*').eq('week',week).order('created_at',{ascending:false}),
       cloudClient.from('springer_pool').select('*').eq('week',week),
-      cloudClient.rpc('get_change_rule',{p_week:week})
+      cloudClient.rpc('get_change_rule',{p_week:week}),
+      cloudClient.from('shift_transfers').select('*').eq('taker_id',sessionId).eq('status','pending').order('created_at',{ascending:false}),
+      cloudClient.rpc('get_capacity_alerts',{p_week:week})
     ]);
     for (const r of results) if(r.error) throw r.error;
     if (request !== cloudRequest || !cloudSession || cloudSession.user.id !== sessionId) return;
@@ -65,7 +67,7 @@ async function cloudSync() {
       data.shifts[person.name][row.day][row.period]=row.value;
       revisions.set([week,row.user_id,row.day,row.period].join('|'),row.revision);
     }
-    db[week]=data; cloudShiftRevisions=revisions;cloudLoadedWeek=week;cloudDeadline=results[3].data;cloudInbox=results[4].data;cloudTransfers=results[5].data;cloudPool=results[6].data;cloudRule=results[7].data;cloudServerOffset=new Date(cloudRule.server_now).getTime()-Date.now();
+    db[week]=data; cloudShiftRevisions=revisions;cloudLoadedWeek=week;cloudDeadline=results[3].data;cloudInbox=results[4].data;cloudTransfers=results[5].data;cloudPool=results[6].data;cloudRule=results[7].data;cloudIncoming=results[8].data;cloudCapacity=results[9].data.alerts||[];cloudServerOffset=new Date(cloudRule.server_now).getTime()-Date.now();
     const scroll=document.getElementById('weekTableScroll');
     const scrollTop=scroll.scrollTop,scrollLeft=scroll.scrollLeft;
     setupUserInterface();renderApp();renderDeadline();renderInbox();
@@ -177,7 +179,7 @@ function quickClaim(day,period) {
 function updateShift(day,period,value) {
   const person=team.find(p=>p.name===currentUser),week=getWeekKey(currentWeekStart);
   if(!person) return;
-  if(isPastShift(week,day)){cloudStatus('Vergangene Tage können nicht bearbeitet werden.',true);return;}
+  if(isShiftLocked(week,day,period)){cloudStatus(shiftLockText(week,day),true);return;}
   const old=db[week]?.shifts[currentUser]?.[day]?.[period] || '-';
   if(isScheduled(old) && value!==old) return openWithdrawal(day,period);
   if(value===old && shiftAnswered(week,person.id,day,period)) {cloudStatus('Bereits eingetragen oder beantwortet.');return;}
