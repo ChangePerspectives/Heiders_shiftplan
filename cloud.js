@@ -29,7 +29,7 @@ function cloudClear() {
   cloudActor=null; cloudSession=null; currentUser=null; team=[]; db={}; cloudShiftRevisions.clear();
   document.getElementById('appMain').hidden=true;
   document.getElementById('adminUserSelectWrapper').classList.add('hidden');
-  document.getElementById('userBadgeName').textContent='Abgemeldet';
+  document.getElementById('userBadgeName').textContent='Abgemeldet';document.getElementById('accountMenu').open=false;document.getElementById('accountDetails').textContent='Nicht angemeldet';
   document.getElementById('loginModal').classList.remove('hidden');
   closeSollModal(); document.getElementById('noteEditBox').classList.add('hidden');
 }
@@ -99,6 +99,7 @@ async function cloudWrite(name,args,onSuccess) {
 async function cloudInit() {
   if(location.hash==='#test' || sessionStorage.getItem('heiders_test_active')==='1'){await startDemo();return;}
   cloudClear();switchTab('cards');
+  document.getElementById('rememberLogin').checked=localStorage.getItem('heiders_auth_remember')!=='0';
   const config=window.HEIDERS_CONFIG || {};
   if(!/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(config.supabaseUrl || '') || !config.publishableKey) {
     document.getElementById('loginError').textContent='Die App wird noch eingerichtet. Projektadresse und öffentlicher Schlüssel fehlen.';
@@ -113,7 +114,7 @@ async function cloudInit() {
     } catch(_) {secretKey=true;}
   }
   if(secretKey) {document.getElementById('loginError').textContent='Falscher Schlüsseltyp in config.js.';return;}
-  cloudClient=supabase.createClient(config.supabaseUrl,config.publishableKey,{auth:{storageKey:'heiders_cloud_auth',persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+  cloudClient=supabase.createClient(config.supabaseUrl,config.publishableKey,{auth:{storageKey:'heiders_cloud_auth',storage:cloudAuthStorage,persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
   const {data,error}=await cloudClient.auth.getSession();
   if(error) {document.getElementById('loginError').textContent='Die Anmeldung konnte nicht wiederhergestellt werden.';return;}
   cloudSession=data.session;
@@ -133,6 +134,8 @@ async function confirmUserChoice() {
   const button=document.getElementById('loginSubmit'), errorEl=document.getElementById('loginError');
   button.disabled=true;errorEl.textContent='';
   try {
+    const remember=document.getElementById('rememberLogin').checked;localStorage.setItem('heiders_auth_remember',remember?'1':'0');
+    if(remember)sessionStorage.removeItem('heiders_cloud_auth');else localStorage.removeItem('heiders_cloud_auth');
     const {data,error}=await cloudClient.auth.signInWithPassword({email:document.getElementById('loginEmail').value.trim(),password:document.getElementById('loginPassword').value});
     if(error) throw error;
     cloudSession=data.session;document.getElementById('loginPassword').value='';await cloudSync();
@@ -147,7 +150,9 @@ async function resetUserChoice() {
 }
 function setupUserInterface() {
   const admin=!!cloudActor?.is_admin;
+  for(const id of ['adminAssignmentButton','demandEditButton','reservationEditButton'])document.getElementById(id).hidden=!admin;
   document.getElementById('userBadgeName').textContent=cloudActor?.name || 'Abgemeldet';
+  document.getElementById('accountDetails').textContent=(window.heidersDemoActive?'Testmodus · ': '')+(admin?'Admin':'Teammitglied')+(cloudSession?.user.email?' · '+cloudSession.user.email:'');
   document.getElementById('currentUserDisplay').textContent=currentUser;
   document.getElementById('noteEditButton').hidden=!admin;
   document.getElementById('adminControls').classList.toggle('hidden',!admin);
@@ -172,18 +177,18 @@ async function changeWeek(direction) {
   if(db[getWeekKey(currentWeekStart)]) {renderApp();document.getElementById('appMain').hidden=false;}
 }
 function quickClaim(day,period) {
-  const person=team.find(p=>p.name===currentUser);if(!person)return;
-  if(isScheduled(db[getWeekKey(currentWeekStart)]?.shifts[currentUser]?.[day]?.[period])) {cloudStatus('Du bist bereits eingetragen. Du kannst dich über Austragen entfernen.');return;}
-  return updateShift(day,period,person.role.includes('Küche')&&!person.role.includes('Service')?'kü':'se');
+ selectFocusDay(day);switchTab('cards');cloudStatus('Bitte Service/Theke oder Küche für die Eintragung auswählen.');
 }
-function updateShift(day,period,value) {
+async function updateShift(day,period,value) {
   const person=team.find(p=>p.name===currentUser),week=getWeekKey(currentWeekStart);
   if(!person) return;
   if(isShiftLocked(week,day,period)){cloudStatus(shiftLockText(week,day),true);return;}
   const old=db[week]?.shifts[currentUser]?.[day]?.[period] || '-';
   if(isScheduled(old) && value!==old) return openWithdrawal(day,period);
   if(value===old && shiftAnswered(week,person.id,day,period)) {cloudStatus('Bereits eingetragen oder beantwortet.');return;}
-  return cloudWrite('save_shift',{p_week:week,p_user:person.id,p_day:day,p_period:period,p_value:value,p_revision:cloudShiftRevisions.get([week,person.id,day,period].join('|')) || 0});
+  const saved=await cloudWrite('save_shift',{p_week:week,p_user:person.id,p_day:day,p_period:period,p_value:value,p_revision:cloudShiftRevisions.get([week,person.id,day,period].join('|')) || 0});
+  if(saved&&isScheduled(value)&&db[week]?.shifts[person.name]?.[day]?.[period]!==value)cloudStatus('Nicht eingetragen: Bedarf bereits gedeckt. Pia und Nelly wurden zur Prüfung informiert.',true);
+  return saved;
 }
 const legacyToggleNoteEdit=toggleNoteEdit;
 toggleNoteEdit=function() {
@@ -202,20 +207,21 @@ openSollModal=function() {
   legacyOpenSollModal();
 };
 function saveSollSettings() {
-  if(!cloudActor?.is_admin || cloudEditWeek!==getWeekKey(currentWeekStart))return;
-  const requirements={},day={},evening={};
-  for(const d of daysOfWeek) {
-    requirements[d.key]={};
-    for(const period of ['tag','abend']) {
-      const input=document.getElementById(`soll_${d.key}_${period}`),value=Number(input.value);
-      if(input.value.trim()==='' || !Number.isInteger(value) || value<0 || value>50) {cloudStatus('Personalbedarf muss eine ganze Zahl zwischen 0 und 50 sein.',true);input.focus();return;}
-      requirements[d.key][period]=value;
-    }
-    day[d.key]=document.getElementById(`res_${d.key}_tag`).value;
-    evening[d.key]=document.getElementById(`res_${d.key}_abend`).value;
-    if(day[d.key].length>300 || evening[d.key].length>300){cloudStatus('Reservierungstext ist zu lang (maximal 300 Zeichen).',true);return;}
-  }
-  return cloudWrite('save_week_settings',{p_week:cloudEditWeek,p_requirements:requirements,p_day:day,p_evening:evening,p_revision:cloudSettingsRevision},closeSollModal);
+ if(!cloudActor?.is_admin||cloudEditWeek!==getWeekKey(currentWeekStart)||!settingsSnapshot)return;
+ const requirements=structuredClone(settingsSnapshot.soll),day={...settingsSnapshot.resTag},evening={...settingsSnapshot.resAbend};
+ for(const d of daysOfWeek){
+ if(settingsMode==='bedarf'){
+ requirements[d.key]={};for(const period of ['tag','abend']){
+ const input=document.getElementById(`soll_${d.key}_${period}`),value=Number(input.value);
+ if(input.value.trim()===''||!Number.isInteger(value)||value<0||value>50){cloudStatus('Personalbedarf muss eine ganze Zahl zwischen 0 und 50 sein.',true);input.focus();return;}
+ requirements[d.key][period]=value;
+ }
+ }else{
+ day[d.key]=document.getElementById(`res_${d.key}_tag`).value;evening[d.key]=document.getElementById(`res_${d.key}_abend`).value;
+ if(day[d.key].length>300||evening[d.key].length>300){cloudStatus('Reservierungstext ist zu lang (maximal 300 Zeichen).',true);return;}
+ }
+ }
+ return cloudWrite('save_week_settings',{p_week:cloudEditWeek,p_requirements:requirements,p_day:day,p_evening:evening,p_revision:cloudSettingsRevision},closeSollModal);
 }
 window.onload=()=>cloudInit().catch(()=>cloudStatus('App konnte nicht geladen werden. Bitte erneut öffnen.',true));
 
@@ -279,12 +285,11 @@ async function readNotification(id) {
   await cloudSync();
 }
 function getUpcomingPlanningWeek() {
-  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
-  const value=type=>parts.find(p=>p.type===type).value;
-  const date=new Date(`${value('year')}-${value('month')}-${value('day')}T00:00:00Z`);
-  const weekday=date.getUTCDay()||7;date.setUTCDate(date.getUTCDate()+8-weekday);
-  const anchor=Date.parse('2026-10-12T00:00:00Z');
-  return new Date(anchor+Math.floor((date.getTime()-anchor)/1209600000)*1209600000).toISOString().slice(0,10);
+ const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(Date.now()+cloudServerOffset));
+ const value=type=>parts.find(p=>p.type===type).value;
+ const date=new Date(`${value('year')}-${value('month')}-${value('day')}T12:00:00Z`);
+ const weekday=date.getUTCDay()||7;date.setUTCDate(date.getUTCDate()+8-weekday+14);
+ return date.toISOString().slice(0,10);
 }
 function renderDeadline() {
   const el=document.getElementById('deadlinePanel'),d=cloudDeadline;if(!d)return;
@@ -293,10 +298,10 @@ function renderDeadline() {
   el.className=`p-3 rounded-2xl border text-xs ${complete?'bg-emerald-50 border-emerald-200':late?'bg-red-50 border-red-200':'bg-amber-50 border-amber-200'}`;
   const format=date=>new Date(date+'T12:00:00Z').toLocaleDateString('de-DE',{timeZone:'Europe/Berlin',day:'2-digit',month:'2-digit'});
   el.innerHTML=`<div class="font-bold">${complete?'✅ Alle Rückmeldungen vorhanden':late?'🔴 Frist abgelaufen – Rückmeldungen fehlen':'🟡 Rückmeldungen noch offen'}</div>
-    <div class="mt-1">Nächste zwei Wochen: ${format(d.week)}–${format(d.end)} · Frist: ${new Date(d.deadline).toLocaleString('de-DE',{timeZone:'Europe/Berlin',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})} Uhr</div>
+    <div class="mt-1">Planungswoche: ${format(d.week)}–${format(d.end)} · Frist: ${new Date(d.deadline).toLocaleString('de-DE',{timeZone:'Europe/Berlin',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})} Uhr</div>
     <div class="mt-1">${d.answered} von ${d.total} Schichtantworten · Eintrag oder ausdrücklich Frei zählt.</div>
     ${!complete?`<details class="mt-2"><summary>Fehlende Antworten anzeigen (${d.missing_people.length} Personen)</summary><div class="mt-1">${d.missing_people.map(p=>`${escapeHtml(p.name)}: ${p.missing} offen`).join('<br>')}</div></details>`:''}
-    <button class="mt-2 underline font-bold text-[#8C1D40]" onclick="openPlanningWeek('${d.week}')">Diese zwei Wochen bearbeiten</button>
+    <button class="mt-2 underline font-bold text-[#8C1D40]" onclick="openPlanningWeek('${d.week}')">Planungswoche bearbeiten</button>
     <div class="text-[10px] text-stone-500 mt-1">Die Schichtbesetzung wird separat geprüft.</div>`;
   if(el.querySelector('details'))el.querySelector('details').open=detailsOpen;
 }
@@ -315,3 +320,10 @@ document.addEventListener('keydown',event=>{
     else if(!event.shiftKey && document.activeElement===last){event.preventDefault();first?.focus();}
   }
 });
+
+// Sitzungsdaten speichern, niemals das eingegebene Passwort.
+const cloudAuthStorage={
+ getItem(key){return(localStorage.getItem('heiders_auth_remember')==='0'?sessionStorage:localStorage).getItem(key);},
+ setItem(key,value){(localStorage.getItem('heiders_auth_remember')==='0'?sessionStorage:localStorage).setItem(key,value);},
+ removeItem(key){localStorage.removeItem(key);sessionStorage.removeItem(key);}
+};
