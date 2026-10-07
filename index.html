@@ -13,7 +13,7 @@
     .custom-scrollbar::-webkit-scrollbar-track { background: #F5EFEE; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #C5A059; border-radius: 3px; }
     
-    /* WICHTIG: border-separate löst den Sticky-Fehler in allen Browsern & Handys */
+    /* Perfekte Fixierung der Mitarbeiter-Spalte beim Scrollen */
     table.sticky-table {
       border-collapse: separate !important;
       border-spacing: 0 !important;
@@ -23,13 +23,15 @@
       position: sticky !important;
       left: 0 !important;
       background-color: #FFFFFF !important;
-      z-index: 10 !important;
-      border-right: 2px solid #E5E7EB !important;
-      box-shadow: 2px 0 5px -2px rgba(0, 0, 0, 0.12);
+      z-index: 20 !important;
+      min-width: 130px !important;
+      max-width: 140px !important;
+      border-right: 2px solid #D1D5DB !important;
+      box-shadow: 3px 0 6px -2px rgba(0, 0, 0, 0.15);
     }
     th.sticky-col {
       background-color: #F5EFEE !important;
-      z-index: 20 !important;
+      z-index: 30 !important;
     }
     tr.user-highlight .sticky-col {
       background-color: #FEF3C7 !important;
@@ -89,9 +91,10 @@
         <button onclick="changeWeek(1)" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-lg font-bold text-xs text-[#6B1D2F]">Vor ❯</button>
       </div>
 
+      <!-- Tab Buttons (Standard: Gesamtplan) -->
       <div class="flex rounded-lg bg-stone-100 p-1 text-xs">
-        <button id="tabMyShiftsBtn" onclick="switchTab('myShifts')" class="flex-1 py-2 rounded-md font-bold btn-active">✏️ Meine Schichten</button>
-        <button id="tabFullPlanBtn" onclick="switchTab('fullPlan')" class="flex-1 py-2 rounded-md font-bold btn-inactive">📅 Gesamtplan</button>
+        <button id="tabFullPlanBtn" onclick="switchTab('fullPlan')" class="flex-1 py-2 rounded-md font-bold btn-active">📅 Gesamtplan</button>
+        <button id="tabMyShiftsBtn" onclick="switchTab('myShifts')" class="flex-1 py-2 rounded-md font-bold btn-inactive">✏️ Meine Schichten</button>
       </div>
 
     </div>
@@ -123,20 +126,8 @@
   <!-- Main Content Container -->
   <main class="max-w-4xl mx-auto px-3 mt-3">
     
-    <!-- TAB 1: MEINE SCHICHTEN -->
-    <div id="tabMyShifts" class="space-y-3">
-      <div class="bg-white p-3 rounded-xl border border-stone-200 shadow-sm flex justify-between items-center">
-        <span class="font-bold text-xs sm:text-sm text-[#6B1D2F]">Eingeloggt als: <span id="currentUserDisplay" class="underline">Nelly</span></span>
-        <button onclick="toggleSpecialDays()" id="specialDaysBtn" class="px-2.5 py-1 bg-stone-200 text-stone-700 rounded text-xs font-bold">
-          Mo/So anzeigen
-        </button>
-      </div>
-
-      <div id="myShiftsList" class="space-y-3"></div>
-    </div>
-
-    <!-- TAB 2: GESAMTPLAN -->
-    <div id="tabFullPlan" class="hidden space-y-3">
+    <!-- TAB 1: GESAMTPLAN (STANDARDEINSTIEG) -->
+    <div id="tabFullPlan" class="space-y-3">
       <div id="adminControls" class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs hidden">
         <span class="font-bold block text-amber-900 mb-1">👑 Inhaber- & Admin-Steuerung (Nelly & Pia)</span>
         <button onclick="openSollModal()" class="px-3 py-1.5 bg-[#6B1D2F] text-white rounded font-bold shadow">⚙️ Soll-Personal & Events festlegen</button>
@@ -152,7 +143,7 @@
           <table class="w-full text-left text-xs min-w-[750px] sticky-table">
             <thead>
               <tr class="bg-[#F5EFEE] text-[#6B1D2F] font-bold border-b border-stone-200" id="tableHeaderRow">
-                <th class="p-2 w-32 sticky-col">Mitarbeiter</th>
+                <th class="p-2 sticky-col">Mitarbeiter</th>
               </tr>
             </thead>
             <tbody id="fullPlanTableBody" class="divide-y divide-stone-100">
@@ -167,6 +158,18 @@
         <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block"></span> Springer (S)</span>
         <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span> Rot = Schicht unterbesetzt</span>
       </div>
+    </div>
+
+    <!-- TAB 2: MEINE SCHICHTEN -->
+    <div id="tabMyShifts" class="hidden space-y-3">
+      <div class="bg-white p-3 rounded-xl border border-stone-200 shadow-sm flex justify-between items-center">
+        <span class="font-bold text-xs sm:text-sm text-[#6B1D2F]">Eingeloggt als: <span id="currentUserDisplay" class="underline">Nelly</span></span>
+        <button onclick="toggleSpecialDays()" id="specialDaysBtn" class="px-2.5 py-1 bg-stone-200 text-stone-700 rounded text-xs font-bold">
+          Mo/So anzeigen
+        </button>
+      </div>
+
+      <div id="myShiftsList" class="space-y-3"></div>
     </div>
 
   </main>
@@ -205,9 +208,9 @@
     let currentUser = localStorage.getItem('heiders_user') || null;
     let currentWeekStart = new Date(2026, 9, 5); // Mo 05.10.2026
     let showSpecialDays = false;
-    let activeTab = 'myShifts';
+    let activeTab = 'fullPlan'; // STANDARDEINSTIEG GESAMTPLAN
 
-    // Alle 8 Wochen aus der Vorlage "Dienstplan-Vorlage-Heiders_3.xlsx"
+    // Feste Start-Datenbank mit allen 8 Wochen aus deiner Excel
     const seedDB = {
       "2026-10-05": {
         "events": { "do": "Lesung - 45 Leute am Abend" },
@@ -337,6 +340,7 @@
         setupUserInterface();
       }
       loadWeekData();
+      switchTab('fullPlan'); // Standardeinstieg Gesamtplan aktivieren
       renderApp();
     }
 
@@ -457,16 +461,16 @@
 
     function switchTab(tab) {
       activeTab = tab;
-      if (tab === 'myShifts') {
+      if (tab === 'fullPlan') {
+        document.getElementById('tabFullPlan').classList.remove('hidden');
+        document.getElementById('tabMyShifts').classList.add('hidden');
+        document.getElementById('tabFullPlanBtn').className = 'flex-1 py-2 rounded-md font-bold btn-active';
+        document.getElementById('tabMyShiftsBtn').className = 'flex-1 py-2 rounded-md font-bold btn-inactive';
+      } else {
         document.getElementById('tabMyShifts').classList.remove('hidden');
         document.getElementById('tabFullPlan').classList.add('hidden');
         document.getElementById('tabMyShiftsBtn').className = 'flex-1 py-2 rounded-md font-bold btn-active';
         document.getElementById('tabFullPlanBtn').className = 'flex-1 py-2 rounded-md font-bold btn-inactive';
-      } else {
-        document.getElementById('tabMyShifts').classList.add('hidden');
-        document.getElementById('tabFullPlan').classList.remove('hidden');
-        document.getElementById('tabFullPlanBtn').className = 'flex-1 py-2 rounded-md font-bold btn-active';
-        document.getElementById('tabMyShiftsBtn').className = 'flex-1 py-2 rounded-md font-bold btn-inactive';
       }
     }
 
@@ -684,7 +688,7 @@
       const weekData = db[weekKey];
 
       const headerRow = document.getElementById('tableHeaderRow');
-      headerRow.innerHTML = `<th class="p-2 w-32 sticky-col">Mitarbeiter</th>`;
+      headerRow.innerHTML = `<th class="p-2 sticky-col">Mitarbeiter</th>`;
 
       daysOfWeek.forEach((dayObj, index) => {
         if (dayObj.isSpecial && !showSpecialDays) return;
@@ -729,10 +733,12 @@
         const isCurrent = m.name === currentUser;
         tr.className = isCurrent ? 'user-highlight font-medium' : 'hover:bg-stone-50';
 
-        // Jede Zelle der 1. Spalte erhält explizit class="sticky-col"
-        let nameTd = `<td class="p-2 font-bold text-[#2B2321] sticky-col flex flex-col">
-          <span>${m.name}</span>
-          <span class="text-[9px] text-stone-500 font-normal">${m.role}</span>
+        // KORREKTUR: Kein "flex flex-col" auf <td>, sondern ein inneres <div>
+        let nameTd = `<td class="p-2 sticky-col align-middle">
+          <div class="flex flex-col">
+            <span class="font-bold text-[#2B2321] text-xs">${m.name}</span>
+            <span class="text-[9px] text-stone-500 font-normal leading-tight">${m.role}</span>
+          </div>
         </td>`;
 
         let daysTds = '';
