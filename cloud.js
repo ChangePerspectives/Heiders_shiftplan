@@ -3,6 +3,7 @@ let cloudClient, cloudActor, cloudSession, cloudBusy = false, cloudRequest = 0;
 let cloudNoteRevision = 0, cloudSettingsRevision = 0, cloudEditWeek = null;
 let cloudShiftRevisions = new Map();
 let cloudLoadedWeek = null;
+let cloudAbsences=[];
 let cloudCapacity=[],cloudIncoming=[],cloudRule=null, cloudTransfers=[],cloudPool=[],cloudServerOffset=0;
 let cloudDeadline=null,cloudInbox={items:[],unread:0},withdrawalContext=null,modalReturnFocus=null;
 function escapeHtml(value) {
@@ -28,8 +29,8 @@ function cloudClear() {
   if(typeof resetCodeLogin==='function')resetCodeLogin();
   if(typeof teamLoginEmails!=='undefined')teamLoginEmails.clear();
   if(typeof clearPushBadge==='function')clearPushBadge();
-  cloudRequest++;cloudLoadedWeek=null;cloudDeadline=null;cloudInbox={items:[],unread:0};cloudTransfers=[];cloudIncoming=[];cloudCapacity=[];cloudPool=[];cloudRule=null;closeWithdrawal();closeInbox();closeTransfer();closeEmployees();closeAdminAssignment();
-  cloudActor=null; cloudSession=null; currentUser=null; team=[]; db={}; cloudShiftRevisions.clear();
+  if(typeof clearAbsenceUI==='function')clearAbsenceUI();cloudRequest++;cloudLoadedWeek=null;cloudDeadline=null;cloudInbox={items:[],unread:0};cloudTransfers=[];cloudIncoming=[];cloudCapacity=[];cloudPool=[];cloudRule=null;closeWithdrawal();closeInbox();closeTransfer();closeEmployees();closeAdminAssignment();
+  if(typeof clearAbsenceUI==='function')clearAbsenceUI();cloudAbsences=[];cloudActor=null; cloudSession=null; currentUser=null; team=[]; db={}; cloudShiftRevisions.clear();
   document.getElementById('appMain').hidden=true;
   document.getElementById('adminUserSelectWrapper').classList.add('hidden');
   document.getElementById('userBadgeName').textContent='Abgemeldet';document.getElementById('accountMenu').open=false;document.getElementById('accountDetails').textContent='Nicht angemeldet';
@@ -41,7 +42,7 @@ async function cloudSync() {
   const request=++cloudRequest, sessionId=cloudSession.user.id, week=getWeekKey(currentWeekStart);
   if (!navigator.onLine) {cloudStatus('Offline – der angezeigte Plan kann veraltet sein.',true);return;}
   try {
-    const profileResult=await cloudClient.from('profiles').select('id,name,job_role,is_admin,active,auth_user_id').order('name');
+    const profileResult=await cloudClient.from('profiles').select('id,name,job_role,is_admin,active,auth_user_id,absence_enabled,absence_revision').order('name');
     if(profileResult.error)throw profileResult.error;
     const actor=profileResult.data.find(p=>(p.auth_user_id===sessionId||(window.heidersDemoActive&&!p.auth_user_id&&p.id===sessionId))&&p.active);
     if(!actor){if(request===cloudRequest&&cloudSession?.user.id===sessionId){cloudClear();document.getElementById('loginError').textContent='Dein Konto wurde noch keinem aktiven Teamprofil zugeordnet.';}return;}
@@ -55,14 +56,15 @@ async function cloudSync() {
       cloudClient.from('springer_pool').select('*').eq('week',week),
       cloudClient.rpc('get_change_rule',{p_week:week}),
       cloudClient.from('shift_transfers').select('*').eq('taker_id',actor.id).eq('status','pending').order('created_at',{ascending:false}),
-      cloudClient.rpc('get_capacity_alerts',{p_week:week})
+      cloudClient.rpc('get_capacity_alerts',{p_week:week}),
+      cloudClient.rpc('heiders_get_absences',{p_week:week})
     ]);
     for (const r of results) if(r.error) throw r.error;
     if (request !== cloudRequest || !cloudSession || cloudSession.user.id !== sessionId) return;
     const profiles=results[0].data;
     cloudActor=actor;
     if(!cloudActor) {cloudClear();document.getElementById('loginError').textContent='Dein Konto wurde noch keinem aktiven Teamprofil zugeordnet.';return;}
-    team=profiles.filter(p=>p.active).map(p=>({id:p.id,name:p.name,role:p.job_role,isAdmin:p.is_admin,hasLogin:!!p.auth_user_id||!!window.heidersDemoActive}));
+    team=profiles.filter(p=>p.active).map(p=>({id:p.id,name:p.name,role:p.job_role,isAdmin:p.is_admin,hasLogin:!!p.auth_user_id||!!window.heidersDemoActive,absenceEnabled:!!p.absence_enabled,absenceRevision:p.absence_revision||0}));
     if (!cloudActor.is_admin || !team.some(p=>p.name===currentUser)) currentUser=cloudActor.name;
     const data=cloudBlankWeek(), settings=results[2].data;
     if(settings) Object.assign(data,{note:settings.note,soll:settings.requirements,resTag:settings.reservations_day,resAbend:settings.reservations_evening,noteRevision:settings.note_revision,settingsRevision:settings.settings_revision});
@@ -75,7 +77,7 @@ async function cloudSync() {
       data.shiftSources[person.name]??={};data.shiftSources[person.name][row.day]??={};data.shiftSources[person.name][row.day][row.period]={text:row.source_text||'',task:row.special_task||''};
       revisions.set([week,row.user_id,row.day,row.period].join('|'),row.revision);
     }
-    db[week]=data; cloudShiftRevisions=revisions;cloudLoadedWeek=week;cloudDeadline=results[3].data;cloudInbox=results[4].data;cloudTransfers=results[5].data;cloudPool=results[6].data;cloudRule=results[7].data;cloudIncoming=results[8].data;cloudCapacity=results[9].data.alerts||[];cloudServerOffset=new Date(cloudRule.server_now).getTime()-Date.now();
+    db[week]=data; cloudShiftRevisions=revisions;cloudLoadedWeek=week;cloudDeadline=results[3].data;cloudInbox=results[4].data;cloudTransfers=results[5].data;cloudPool=results[6].data;cloudRule=results[7].data;cloudIncoming=results[8].data;cloudCapacity=results[9].data.alerts||[];cloudAbsences=results[10].data||[];cloudServerOffset=new Date(cloudRule.server_now).getTime()-Date.now();
     const scroll=document.getElementById('weekTableScroll');
     const scrollTop=scroll.scrollTop,scrollLeft=scroll.scrollLeft;
     setupUserInterface();renderApp();renderDeadline();renderInbox();

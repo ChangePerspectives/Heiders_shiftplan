@@ -61,19 +61,20 @@ function dayMarkup(edit,selectedDay=focusDay){
  let html=`<h2 class="day-title">${daysOfWeek[index].label}, ${getDateForDay(index).toLocaleDateString('de-DE',{day:'numeric',month:'long'})}</h2>`;
  if(!edit)html+='<div class="overview-shifts">';
  for(const period of ['tag','abend']){
- const staff=team.filter(p=>isScheduled(data.shifts[p.name]?.[day]?.[period]));
- const absences=team.filter(p=>['u','k','f'].includes(data.shifts[p.name]?.[day]?.[period]));
+ const staff=team.filter(p=>isScheduled(data.shifts[p.name]?.[day]?.[period])&&!absenceAt(p.id,shiftDateKey(getWeekKey(currentWeekStart),day),period));
+ const absences=team.filter(p=>['u','k','f'].includes(data.shifts[p.name]?.[day]?.[period])||absenceAt(p.id,shiftDateKey(getWeekKey(currentWeekStart),day),period));
  const needed=data.soll[day]?.[period]||0,open=Math.max(0,needed-staff.length),excess=Math.max(0,staff.length-needed),res=(period==='tag'?data.resTag:data.resAbend)?.[day];
  html+=`<article class="shift-card"><div class="shift-heading"><h3>${period==='tag'?'☀ Tagschicht':'☾ Abendschicht'}</h3><span class="${open||excess?'open-slot':needed>0?'occupancy is-complete':'occupancy'}">${excess?excess+' zu viel · '+staff.length+'/'+needed+' besetzt':open?open+' '+(open===1?'Platz frei':'Plätze frei'):(!needed&&!staff.length?'Kein Bedarf':(needed>0?'✓ ':'')+staff.length+' von '+needed+' besetzt')}</span></div><p class="hint">${period==='tag'?'Ab 10:30 Uhr':'Ab 15:00 Uhr'}</p><div class="reservation ${res?.trim()?'has-reservation':''}"><strong>${res?.trim()?'📌 ':''}Reservierungen · ${period==='tag'?'Tag':'Abend'}</strong>${res?escapeHtml(res):'Keine Reservierungen hinterlegt.'}</div><ul class="roster">${staff.map(p=>{
  const transfer=pendingFor(p.id,day,period);
  return `<li><div class="person-line"><strong>${escapeHtml(p.name)}</strong><span>${escapeHtml(shiftRoleLabel(data.shifts[p.name][day][period]))}</span></div>${shiftTimeHint(p.name,day,period)}${data.shifts[p.name][day][period]==='offen'&&!transfer&&!isShiftLocked(getWeekKey(currentWeekStart),day,period)&&(cloudActor?.is_admin||cloudActor?.id===p.id)&&edit&&p.name!==currentUser?roleConfirmationButtons(p.id,day,period):''}${transfer?`<div class="transfer-status">Übernahme bei ${escapeHtml(personName(transfer.taker_id))} angefragt · Bestätigung offen</div>`:''}</li>`;
- }).join('')}</ul>${!staff.length?'<p class="hint">Noch niemand eingetragen.</p>':''}${absences.length?`<p class="absence-line">Abwesend / frei: ${absences.map(p=>escapeHtml(p.name)+' ('+escapeHtml(shiftRoleLabel(data.shifts[p.name][day][period]))+')').join(', ')}</p>`:''}${edit?renderClaimAction(day,period):''}</article>`;
+ }).join('')}</ul>${!staff.length?'<p class="hint">Noch niemand eingetragen.</p>':''}${absences.length?`<p class="absence-line">Abwesend / frei: ${absences.map(p=>escapeHtml(p.name)+' ('+escapeHtml(absenceAt(p.id,shiftDateKey(getWeekKey(currentWeekStart),day),period)?'Abwesenheit gemeldet':shiftRoleLabel(data.shifts[p.name]?.[day]?.[period]))+')').join(', ')}</p>`:''}${edit?renderClaimAction(day,period):''}</article>`;
  }
  return html+(!edit?'</div>':'');
 }
 function renderClaimAction(day,period){
  const person=team.find(p=>p.name===currentUser),data=db[getWeekKey(currentWeekStart)],value=data?.shifts[currentUser]?.[day]?.[period];if(!person)return '';
  if(isShiftLocked(getWeekKey(currentWeekStart),day,period))return `<p class="past-label">${shiftLockText(getWeekKey(currentWeekStart),day)}</p>`;
+ if(absenceAt(person.id,shiftDateKey(getWeekKey(currentWeekStart),day),period))return '<p class="absence-info">Abwesenheit gemeldet · Für diese Schicht nicht verfügbar.</p>';
  const pending=pendingFor(person.id,day,period);
  if(value==='offen'&&!pending)return roleConfirmationButtons(person.id,day,period)+`<button class="wide secondary" onclick="openWithdrawal('${day}','${period}')">Eingetragen · Ändern</button>`;
  if(isScheduled(value))return pending?`<p class="hint">Übernahme angefragt. Bis zur Bestätigung bleibt die Eintragung bestehen.</p><button class="wide secondary" onclick="cancelTransfer('${pending.id}')">Anfrage zurückziehen</button>`:`<button class="wide secondary" onclick="openWithdrawal('${day}','${period}')">Eingetragen · Ändern</button>`;
@@ -146,7 +147,7 @@ function openTransfer(context,target){
  if(!context||cloudBusy)return;
  if(isShiftLocked(context.week,context.day,context.period)){cloudStatus(shiftLockText(context.week,context.day),true);return;}
  transferContext=context;modalReturnFocus=document.activeElement;
- const candidates=team.filter(p=>p.id!==context.id&&p.hasLogin&&!['se','kü','th','offen','u','k'].includes(db[context.week]?.shifts[p.name]?.[context.day]?.[context.period]||'-'));
+ const candidates=team.filter(p=>p.id!==context.id&&p.hasLogin&&!absenceAt(p.id,shiftDateKey(context.week,context.day),context.period)&&!['se','kü','th','offen','u','k'].includes(db[context.week]?.shifts[p.name]?.[context.day]?.[context.period]||'-'));
  const pool=cloudPool.filter(p=>p.available);
  candidates.sort((a,b)=>Number(pool.some(p=>p.user_id===b.id))-Number(pool.some(p=>p.user_id===a.id))||a.name.localeCompare(b.name,'de'));
  document.getElementById('transferDetails').textContent=`${personName(context.id)} · ${context.week} · ${shortDay[context.day]} · ${context.period==='tag'?'Tag':'Abend'} · ${shiftRoleLabel(db[context.week]?.shifts[personName(context.id)]?.[context.day]?.[context.period])}`;
@@ -371,7 +372,7 @@ function renderCapacityWarning(){
  const el=document.getElementById('capacityWarning');el.hidden=!cloudCapacity.length;if(!cloudCapacity.length){el.innerHTML='';return;}
  const open=el.querySelector('details')?.open||false;
  const total=cloudCapacity.reduce((n,a)=>n+a.missing,0);
- el.innerHTML=`<strong>⚠ Personal fehlt trotz abgelaufener Rückmeldefrist</strong><p>${cloudCapacity.length} Schichten unterbesetzt · ${total} Plätze offen</p><details ${open?'open':''}><summary>Betroffene Schichten anzeigen</summary>${cloudCapacity.map(a=>{const date=new Date(a.date+'T12:00:00Z').toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',timeZone:'Europe/Berlin'});return `<div class="capacity-row"><span>${escapeHtml(date)} · ${a.period==='tag'?'Tag':'Abend'} · ${a.filled}/${a.required} besetzt</span><button onclick="openCapacityWeek('${a.week}','${a.day}')">${a.missing} ${a.missing===1?'Platz offen':'Plätze offen'} →</button></div>`;}).join('')}</details>`;
+ el.innerHTML=`<strong>⚠ Personal fehlt nach Planungsfrist</strong><p>${cloudCapacity.length} Schichten unterbesetzt · ${total} Plätze offen</p><details ${open?'open':''}><summary>Betroffene Schichten anzeigen</summary>${cloudCapacity.map(a=>{const date=new Date(a.date+'T12:00:00Z').toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',timeZone:'Europe/Berlin'});return `<div class="capacity-row"><span>${escapeHtml(date)} · ${a.period==='tag'?'Tag':'Abend'} · ${a.filled}/${a.required} besetzt</span><button onclick="openCapacityWeek('${a.week}','${a.day}')">${a.missing} ${a.missing===1?'Platz offen':'Plätze offen'} →</button></div>`;}).join('')}</details>`;
 }
 async function openCapacityWeek(week,day){if(planEditor){requestEditorAction(()=>{closeSollModal(true);return openCapacityWeek(week,day);});return;}if(cloudBusy)return;closeWithdrawal();closeTransfer();closeSollModal();closeWeekNotices();focusDay=day;currentWeekStart=new Date(week+'T12:00:00');cloudLoadedWeek=null;cloudDeadline=null;cloudRule=null;loadWeekData();switchTab('cards');renderApp();await cloudSync();}
 

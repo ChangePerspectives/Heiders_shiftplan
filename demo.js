@@ -54,13 +54,14 @@ function demoReplyStatus(week){
 }
 function demoEffective(t){if(t.status!=='pending')return t.status;const s=demoShift(t.week,t.giver_id,t.day,t.period),target=demoShift(t.week,t.taker_id,t.day,t.period);return s?.revision===t.source_revision&&target?.revision===t.target_revision&&s?.value===t.shift_value?'pending':'stale';}
 function demoExecute(name,a){
+ if(name.startsWith('heiders_')&&['heiders_get_absences','heiders_report_absence','heiders_cancel_absence','heiders_save_absence_settings'].includes(name))return demoAbsenceExecute(name,a);
  const actor=demoActor();demoAssert(actor);
  if(name==='assign_recurring_shifts')return demoAssignRecurring(a);
  if(name==='create_employee'){demoAssert(actor.is_admin);demoAssert(typeof a.p_name==='string'&&a.p_name.trim().length>0&&a.p_name.trim().length<=60,'Ungültiger Name','22023');demoAssert(!demoStore.profiles.some(p=>p.name.toLowerCase()===a.p_name.trim().toLowerCase()),'Name bereits vorhanden','23505');const id=demoId();demoStore.profiles.push({id,name:a.p_name.trim(),job_role:'Aufgabe je Schicht wählen',is_admin:false,active:true,auth_user_id:null});return id;}
  if(name==='confirm_shift_role'){demoOwn(a.p_user);const s=demoShift(a.p_week,a.p_user,a.p_day,a.p_period);demoAssert(!isShiftLocked(a.p_week,a.p_day,a.p_period),'Diese Schicht ist abgeschlossen','22023');demoAssert(['se','kü'].includes(a.p_value),'Ungültige Aufgabe','22023');demoAssert(!demoStore.shift_transfers.some(t=>t.week===a.p_week&&t.day===a.p_day&&t.period===a.p_period&&t.giver_id===a.p_user&&t.status==='pending'),'Bitte Anfrage beenden','22023');demoAssert(s?.value==='offen'&&s.revision===a.p_revision,'Zwischenzeitlich geändert','40001');s.value=a.p_value;s.revision++;return null;}
  if(name==='assign_week_template')return demoAssignWeekTemplate(a);
  if(name==='get_capacity_alerts')return demoCapacityAlerts(a.p_week);
- if(name==='get_reply_deadline')return demoReplyStatus(a.p_week);
+ if(name==='get_reply_deadline')return demoPlanningStatus(a.p_week);
  if(name==='get_change_rule'){const rule=demoDeadline(a.p_week);return {...rule,late:Date.now()>=Date.parse(rule.deadline),server_now:new Date().toISOString()};}
  if(name==='get_notifications')return demoInbox();
  if(name==='mark_notification_read'){demoAssert(demoInbox().items.some(n=>n.id===a.p_id));if(!demoStore.notification_reads.some(r=>r.notification_id===a.p_id&&r.user_id===actor.id))demoStore.notification_reads.push({notification_id:a.p_id,user_id:actor.id});return null;}
@@ -69,6 +70,7 @@ function demoExecute(name,a){
  demoOwn(a.p_user);const s=demoShift(a.p_week,a.p_user,a.p_day,a.p_period,true);demoAssert(s.revision===a.p_revision,'Zwischenzeitlich geändert','40001');
  if(name==='save_shift'){
  demoAssert(['-','se','kü','th','u','k','f'].includes(a.p_value),'Ungültige Eingabe','22023');
+ if(isScheduled(a.p_value))demoAssert(!demoAbsenceAt(a.p_user,shiftDateKey(a.p_week,a.p_day),a.p_period),'Für diese Schicht ist eine Abwesenheit gemeldet','22023');
  demoAssert(!(s.value===a.p_value&&s.revision>0),'Bereits beantwortet','23505');
  demoAssert(!(isScheduled(s.value)&&s.value!==a.p_value),'Bitte Austragen-Funktion verwenden','22023');
  if(!isScheduled(s.value)&&isScheduled(a.p_value)&&demoCapacityNotice(a.p_week,a.p_day,a.p_period,true))return null;
@@ -88,6 +90,7 @@ function demoExecute(name,a){
  demoOwn(a.p_user);let p=demoStore.springer_pool.find(p=>p.week===a.p_week&&p.user_id===a.p_user);demoAssert((p?.revision||0)===a.p_revision,'Zwischenzeitlich geändert','40001');demoAssert(a.p_note.length<=300,'Hinweis zu lang','22023');if(!p){p={week:a.p_week,user_id:a.p_user,revision:0};demoStore.springer_pool.push(p);}Object.assign(p,{available:a.p_available,note:a.p_note,revision:p.revision+1});return null;
  }
  if(name==='request_transfer'){
+ demoAssert(!demoAbsenceAt(a.p_target,shiftDateKey(a.p_week,a.p_day),a.p_period),'Die Zielperson hat eine Abwesenheit gemeldet','22023');
  demoAssert(!isShiftLocked(a.p_week,a.p_day,a.p_period),'Schicht ist abgeschlossen: vergangener Tag oder Tagschicht ab 15:00 Uhr','22023');
  demoOwn(a.p_user);demoAssert(a.p_user!==a.p_target&&demoStore.profiles.some(p=>p.id===a.p_target&&p.active),'Ungültiger Ersatz','22023');
  const s=demoShift(a.p_week,a.p_user,a.p_day,a.p_period),target=demoShift(a.p_week,a.p_target,a.p_day,a.p_period,true);
@@ -100,7 +103,7 @@ function demoExecute(name,a){
  if(name==='respond_transfer'){
  const t=demoStore.shift_transfers.find(t=>t.id===a.p_id);demoAssert(t&&t.taker_id===actor.id,'Nur die angefragte Person kann bestätigen');demoAssert(t.status==='pending','Anfrage nicht mehr offen','40001');
  if(demoEffective(t)==='stale'){t.status='stale';return null;}
- if(a.p_accept){demoAssert(!isShiftLocked(t.week,t.day,t.period),'Schicht ist abgeschlossen: vergangener Tag oder Tagschicht ab 15:00 Uhr','22023');const s=demoShift(t.week,t.giver_id,t.day,t.period),target=demoShift(t.week,t.taker_id,t.day,t.period);s.value='-';s.revision++;target.value=t.shift_value;target.revision++;t.status='accepted';if(Date.now()>=Date.parse(demoDeadline(t.week).deadline))demoNotice('transfer','admins','Schichtübernahme bestätigt',personName(t.giver_id)+' → '+personName(t.taker_id)+' · '+t.day+' · '+t.period,t.week,null,0,t.id);}
+ if(a.p_accept){demoAssert(!demoAbsenceAt(t.taker_id,shiftDateKey(t.week,t.day),t.period),'Zielperson hat eine Abwesenheit gemeldet','22023');if(demoAbsenceAt(t.giver_id,shiftDateKey(t.week,t.day),t.period))demoAssert(!demoCapacityNotice(t.week,t.day,t.period,true),'Schicht ist bereits voll','22023');demoAssert(!isShiftLocked(t.week,t.day,t.period),'Schicht ist abgeschlossen: vergangener Tag oder Tagschicht ab 15:00 Uhr','22023');const s=demoShift(t.week,t.giver_id,t.day,t.period),target=demoShift(t.week,t.taker_id,t.day,t.period);s.value='-';s.revision++;target.value=t.shift_value;target.revision++;t.status='accepted';if(Date.now()>=Date.parse(demoDeadline(t.week).deadline))demoNotice('transfer','admins','Schichtübernahme bestätigt',personName(t.giver_id)+' → '+personName(t.taker_id)+' · '+t.day+' · '+t.period,t.week,null,0,t.id);}
  else t.status='rejected';
  demoNotice('transfer','user',a.p_accept?'Übernahme bestätigt':'Übernahme abgelehnt',personName(t.taker_id)+(a.p_accept?' übernimmt deine Schicht.':' kann nicht übernehmen. Bitte anderen Ersatz anfragen.'),t.week,t.giver_id,0,t.id);return null;
  }
@@ -113,15 +116,15 @@ function demoExecute(name,a){
  throw {message:'Unbekannter Testaufruf: '+name,code:'22023'};
 }
 function createDemoClient(){return {
- from(table){const filters=[];let single=false,orderBy=null,ascending=true;const q={select(){return q;},eq(key,value){filters.push([key,value]);return q;},order(key,options={}){orderBy=key;ascending=options.ascending!==false;return q;},maybeSingle(){single=true;return q;},then(resolve,reject){try{let data=(demoStore[table]||[]).filter(row=>filters.every(([k,v])=>row[k]===v)).map(row=>({...row}));if(orderBy)data.sort((a,b)=>String(a[orderBy]).localeCompare(String(b[orderBy]))*(ascending?1:-1));return Promise.resolve({data:single?(data[0]||null):data,error:null}).then(resolve,reject);}catch(e){return Promise.reject(e).then(resolve,reject);}}};return q;},
+ from(table){demoAbsenceUpgrade();const filters=[];let single=false,orderBy=null,ascending=true;const q={select(){return q;},eq(key,value){filters.push([key,value]);return q;},order(key,options={}){orderBy=key;ascending=options.ascending!==false;return q;},maybeSingle(){single=true;return q;},then(resolve,reject){try{let data=(demoStore[table]||[]).filter(row=>filters.every(([k,v])=>row[k]===v)).map(row=>({...row}));if(orderBy)data.sort((a,b)=>String(a[orderBy]).localeCompare(String(b[orderBy]))*(ascending?1:-1));return Promise.resolve({data:single?(data[0]||null):data,error:null}).then(resolve,reject);}catch(e){return Promise.reject(e).then(resolve,reject);}}};return q;},
  async rpc(name,args={}){const before=structuredClone(demoStore);try{const data=demoExecute(name,args);demoPersist();return {data,error:null};}catch(error){demoStore=before;return {data:null,error};}}
 };}
 async function startDemo(){
  if(cloudBusy)return;
  window.heidersDemoActive=true;sessionStorage.setItem('heiders_test_active','1');
  try{demoStore=JSON.parse(localStorage.getItem(DEMO_KEY));if(demoStore?.version!==3)demoStore=null;}catch(_){demoStore=null;}
- if(!demoStore){demoStore=demoBlankStore();demoPersist();}
- closeWithdrawal();closeTransfer();closeInbox();lastUndo=null;
+ if(!demoStore){demoStore=demoBlankStore();demoPersist();}demoAbsenceUpgrade();
+ clearAbsenceUI();closeWithdrawal();closeTransfer();closeInbox();lastUndo=null;
  cloudClient=createDemoClient();cloudSession={user:{id:demoPeople[0].id}};currentUser=null;db={};cloudActor=null;cloudLoadedWeek=null;cloudRequest++;cloudShiftRevisions.clear();
  currentWeekStart=getStartOfCurrentWeek();focusDay='do';
  document.getElementById('demoBanner').hidden=false;
@@ -131,7 +134,7 @@ async function startDemo(){
 }
 async function switchDemoPerson(id){
  if(!window.heidersDemoActive||cloudBusy||!demoStore.profiles.some(p=>p.id===id)){document.getElementById('demoPerson').value=cloudSession?.user.id;return;}
- closeWithdrawal();closeTransfer();closeInbox();lastUndo=null;cloudSession={user:{id}};cloudActor=null;currentUser=null;cloudRequest++;await cloudSync();
+ clearAbsenceUI();closeWithdrawal();closeTransfer();closeInbox();lastUndo=null;cloudSession={user:{id}};cloudActor=null;currentUser=null;cloudRequest++;await cloudSync();
 }
 async function resetDemo(){if(cloudBusy)return;localStorage.removeItem(DEMO_KEY);await startDemo();cloudStatus('Testdaten zurückgesetzt.');}
 function exitDemo(){if(cloudBusy)return;sessionStorage.removeItem('heiders_test_active');if(location.hash==='#test')history.replaceState(null,'',location.pathname+location.search);location.reload();}
@@ -143,7 +146,7 @@ function demoCapacityAlerts(selected){
   const settings=demoStore.week_settings.find(s=>s.week===week)?.requirements||cloudBlankWeek().soll;
   for(const day of daysOfWeek)for(const period of ['tag','abend']){
    if(isShiftLocked(week,day.key,period))continue;
-   const required=Number(settings[day.key]?.[period])||0,filled=demoStore.shifts.filter(s=>s.week===week&&s.day===day.key&&s.period===period&&isScheduled(s.value)&&demoStore.profiles.some(p=>p.id===s.user_id&&p.active)).length;
+   const required=Number(settings[day.key]?.[period])||0,filled=demoStore.shifts.filter(s=>s.week===week&&s.day===day.key&&s.period===period&&isScheduled(s.value)&&!demoAbsenceAt(s.user_id,shiftDateKey(week,s.day),s.period)&&demoStore.profiles.some(p=>p.id===s.user_id&&p.active)).length;
    if(filled<required)alerts.push({week,day:day.key,period,date:shiftDateKey(week,day.key),required,filled,missing:required-filled});
   }
  }
@@ -152,7 +155,7 @@ function demoCapacityAlerts(selected){
 
 function demoCapacityNotice(week,day,period,attempt){
  const requirements=demoStore.week_settings.find(s=>s.week===week)?.requirements||cloudBlankWeek().soll;
- const required=Number(requirements[day]?.[period])||0,filled=demoStore.shifts.filter(s=>s.week===week&&s.day===day&&s.period===period&&isScheduled(s.value)&&demoStore.profiles.some(p=>p.id===s.user_id&&p.active)).length;
+ const required=Number(requirements[day]?.[period])||0,filled=demoStore.shifts.filter(s=>s.week===week&&s.day===day&&s.period===period&&isScheduled(s.value)&&!demoAbsenceAt(s.user_id,shiftDateKey(week,s.day),s.period)&&demoStore.profiles.some(p=>p.id===s.user_id&&p.active)).length;
  const blocked=attempt?filled>=required:filled>required;
  if(!blocked)return false;
  const key=[attempt?'full':'over',week,day,period,required,filled,attempt?demoActor().id:''].join('|');
@@ -169,7 +172,7 @@ function demoAssignRecurring(a){
  demoAssert(demoActor().is_admin);demoAssert(Number.isInteger(a.p_weeks)&&a.p_weeks>=1&&a.p_weeks<=12,'Ungültige Wochenanzahl','22023');const items=[];
  for(let i=0;i<a.p_weeks;i++){
  const week=new Date(Date.parse(a.p_start+'T12:00:00Z')+i*7*86400000).toISOString().slice(0,10),date=shiftDateKey(week,a.p_day);let status;
- if(isShiftLocked(week,a.p_day,a.p_period))status='past';
+ if(isShiftLocked(week,a.p_day,a.p_period))status='past';else if(demoAbsenceAt(a.p_user,date,a.p_period))status='unavailable';
  else{const s=demoShift(week,a.p_user,a.p_day,a.p_period,true);
  if(isScheduled(s.value))status='existing';else if(s.revision>0)status='unavailable';
  else{demoExecute('save_shift',{p_week:week,p_user:a.p_user,p_day:a.p_day,p_period:a.p_period,p_value:a.p_value,p_revision:s.revision});status=s.value===a.p_value?'assigned':'full';
@@ -205,3 +208,27 @@ async function savePreviewTeam(){
  currentUser=null;closePreviewTeam();await cloudSync();
 }
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!document.getElementById('previewTeamModal').hidden)closePreviewTeam();});
+
+function demoAbsenceUpgrade(){demoStore.staff_absences??=[];for(const p of demoStore.profiles){if(p.absence_enabled===undefined)p.absence_enabled=['nelly','pia','martina','patricia','max'].includes(p.name.replace(/^Test /,'').toLowerCase());p.absence_revision??=1;}}
+function demoAbsenceAt(id,date,period){return !!absenceAt(id,date,period,demoStore.staff_absences||[]);}
+function demoPlanningStatus(week){let total=0,answered=0;const missing_slots=[],data=demoStore.week_settings.find(s=>s.week===week)?.requirements||cloudBlankWeek().soll;for(const d of daysOfWeek)for(const period of ['tag','abend']){const required=data[d.key]?.[period]||0,filled=demoStore.shifts.filter(s=>s.week===week&&s.day===d.key&&s.period===period&&isScheduled(s.value)&&!demoAbsenceAt(s.user_id,shiftDateKey(week,d.key),period)&&demoStore.profiles.some(p=>p.id===s.user_id&&p.active)).length;total+=required;answered+=Math.min(required,filled);if(required>filled)missing_slots.push({day:d.key,period,date:shiftDateKey(week,d.key),missing:required-filled});}return {...demoDeadline(week),end:shiftDateKey(week,'so'),total,answered,missing_people:[],missing_slots};}
+function demoAbsenceExecute(name,a){
+ demoAbsenceUpgrade();const actor=demoActor();demoAssert(actor);
+ if(name==='heiders_get_absences')return demoStore.staff_absences.filter(x=>x.start_date<=shiftDateKey(a.p_week,'so')&&x.end_date>=a.p_week).map(x=>({...x,reason:actor.is_admin||x.user_id===actor.id?x.reason:'',note:actor.is_admin||x.user_id===actor.id?x.note:''}));
+ if(name==='heiders_save_absence_settings'){
+  demoAssert(actor.is_admin);demoAssert(Array.isArray(a.p_changes)&&a.p_changes.length<=100,'Ungültige Einstellungen','22023');const ids=new Set();
+  for(const x of a.p_changes){demoAssert(!ids.has(x.id),'Person doppelt','22023');ids.add(x.id);const p=demoStore.profiles.find(p=>p.id===x.id&&p.active);demoAssert(p&&p.absence_revision===x.revision,'Einstellung zwischenzeitlich geändert','40001');demoAssert(typeof x.enabled==='boolean','Ungültige Einstellung','22023');p.absence_enabled=x.enabled;p.absence_revision++;}return null;
+ }
+ if(name==='heiders_report_absence'){
+  demoOwn(a.p_user);const p=demoStore.profiles.find(p=>p.id===a.p_user&&p.active);demoAssert(p?.absence_enabled,'Nicht freigeschaltet');demoAssert(/^\d{4}-\d{2}-\d{2}$/.test(a.p_start)&&/^\d{4}-\d{2}-\d{2}$/.test(a.p_end)&&a.p_start>=berlinToday()&&a.p_end>=a.p_start&&(Date.parse(a.p_end)-Date.parse(a.p_start))/86400000<=365&&['tag','abend','all'].includes(a.p_period)&&['','Urlaub','Krank','Privat','Sonstiges'].includes(a.p_reason)&&a.p_note.length<=1000,'Ungültige Abwesenheit','22023');
+  const week=selectedMonday(a.p_start),day=daysOfWeek[(new Date(a.p_start+'T12:00:00Z').getUTCDay()+6)%7].key;demoAssert(!(a.p_period!=='abend'&&isShiftLocked(week,day,'tag')),'Die Tagschicht ist geschlossen','22023');
+  demoAssert(!demoStore.staff_absences.some(x=>x.status==='active'&&x.user_id===p.id&&x.start_date<=a.p_end&&x.end_date>=a.p_start&&(x.period==='all'||a.p_period==='all'||x.period===a.p_period)),'Abwesenheit bereits gemeldet','22023');
+  const id=demoId();demoStore.staff_absences.push({id,user_id:p.id,start_date:a.p_start,end_date:a.p_end,period:a.p_period,reason:a.p_reason,note:a.p_note,status:'active',revision:1,cancelled_at:null});demoNotice('absence','admins','Abwesenheit gemeldet',p.name+': '+a.p_start+'–'+a.p_end+' · '+absencePeriodText(a.p_period)+'. Bitte Ersatz prüfen.',week);return id;
+ }
+ if(name==='heiders_cancel_absence'){
+  const x=demoStore.staff_absences.find(x=>x.id===a.p_id);demoAssert(x);demoOwn(x.user_id);demoAssert(x.status==='active'&&x.revision===a.p_revision,'Zwischenzeitlich geändert','40001');demoAssert(x.end_date>=berlinToday(),'Vergangene Abwesenheit','22023');
+  x.status='cancelled';x.cancelled_at=new Date().toISOString();x.revision++;
+  for(const s of demoStore.shifts.filter(s=>s.user_id===x.user_id&&isScheduled(s.value)&&shiftDateKey(s.week,s.day)>=x.start_date&&shiftDateKey(s.week,s.day)<=x.end_date&&(x.period==='all'||x.period===s.period)&&!isShiftLocked(s.week,s.day,s.period)))demoAssert(!demoCapacityNotice(s.week,s.day,s.period,false),'Rücknahme würde eine Überbesetzung erzeugen. Pia oder Nelly müssen zuerst die Zuweisungen prüfen.','22023');
+  demoNotice('absence','admins','Abwesenheit zurückgezogen',personName(x.user_id)+' hat die Abwesenheit zurückgezogen.',selectedMonday(x.start_date));return null;
+ }
+}

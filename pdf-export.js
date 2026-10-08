@@ -3,7 +3,7 @@ function pdfText(value){return String(value??'').replace(/[\u0000-\u0008\u000b\u
 function pdfPlanSnapshot(){
  const week=getWeekKey(currentWeekStart),data=db[week];
  if(!cloudActor||!data||cloudLoadedWeek!==week)throw new Error('Bitte warten, bis die ausgewählte Woche geladen ist.');
- return structuredClone({week,data,team,transfers:cloudTransfers.map(t=>({...t,status:effectiveTransferStatus(t)})),pool:cloudPool.filter(p=>p.available),demo:!!window.heidersDemoActive,offline:!navigator.onLine,exported:new Date().toISOString(),synced:cloudRule?.server_now||null});
+ return structuredClone({week,data,team,absences:cloudAbsences.map(a=>({user_id:a.user_id,start_date:a.start_date,end_date:a.end_date,period:a.period,status:a.status,cancelled_at:a.cancelled_at})),transfers:cloudTransfers.map(t=>({...t,status:effectiveTransferStatus(t)})),pool:cloudPool.filter(p=>p.available),demo:!!window.heidersDemoActive,offline:!navigator.onLine,exported:new Date().toISOString(),synced:cloudRule?.server_now||null});
 }
 function buildPlanPdf(snapshot){
  const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true,putOnlyUsedFonts:true});
@@ -27,7 +27,7 @@ function buildPlanPdf(snapshot){
  function nextPage(table=false){doc.addPage();header();if(table)tableHeader();}
  function wrap(text,available){doc.setFont('Heiders','normal');doc.setFontSize(8.8);return doc.splitTextToSize(pdfText(text),available);}
  function periodText(day,period){
-  const staff=snapshot.team.filter(p=>isScheduled(snapshot.data.shifts[p.name]?.[day]?.[period]));
+  const staff=snapshot.team.filter(p=>isScheduled(snapshot.data.shifts[p.name]?.[day]?.[period])&&!absenceAt(p.id,shiftDateKey(snapshot.week,day),period,snapshot.absences||[]));
   const required=snapshot.data.soll[day]?.[period]||0,lines=[required||staff.length?`${staff.length} von ${required} besetzt`:'Kein Personalbedarf hinterlegt'];
   if(staff.length>required)lines.push((staff.length-required)+' zu viel · Bedarf prüfen');
   if(staff.length<required){const missing=required-staff.length;lines.push(`${missing} ${missing===1?'Platz offen':'Plätze offen'}`);}
@@ -39,8 +39,8 @@ function buildPlanPdf(snapshot){
    const request=snapshot.transfers.find(t=>t.giver_id===person.id&&t.day===day&&t.period===period&&t.status==='pending');
    if(request)lines.push('  Übernahme bei '+(snapshot.team.find(p=>p.id===request.taker_id)?.name||'Profil')+' angefragt - unbestätigt');
   }
-  const absent=snapshot.team.filter(p=>['u','k','f'].includes(snapshot.data.shifts[p.name]?.[day]?.[period]));
-  if(absent.length)lines.push('Abwesend / frei: '+absent.map(p=>p.name+' ('+shiftRoleLabel(snapshot.data.shifts[p.name][day][period])+')').join(', '));
+  const absent=snapshot.team.filter(p=>['u','k','f'].includes(snapshot.data.shifts[p.name]?.[day]?.[period])||absenceAt(p.id,shiftDateKey(snapshot.week,day),period,snapshot.absences||[]));
+  if(absent.length)lines.push('Abwesend / frei: '+absent.map(p=>p.name+' ('+(absenceAt(p.id,shiftDateKey(snapshot.week,day),period,snapshot.absences||[])?'Abwesenheit gemeldet':shiftRoleLabel(snapshot.data.shifts[p.name]?.[day]?.[period]))+')').join(', '));
   const res=(period==='tag'?snapshot.data.resTag:snapshot.data.resAbend)?.[day];
   lines.push('Reservierungen '+(period==='tag'?'Tag':'Abend')+': '+(res||'-'));
   return lines.join('\n');

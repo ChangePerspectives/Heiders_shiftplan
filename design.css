@@ -166,3 +166,24 @@ input,select,textarea{font-size:16px}
 .overview-day{scroll-margin-top:calc(var(--header-height) + 12px)}
 #tabWeek{padding-bottom:62px}
 @media(min-width:1024px) and (min-height:600px){.overview-top-button{bottom:24px}.overview-day{scroll-margin-top:calc(var(--header-height) + var(--nav-height) + 12px)}}
+
+/* v4.12: kompakte Kalenderleiste, Abwesenheiten und freiwillige Planung. */
+.compact-week-copy{flex-wrap:nowrap;gap:0;min-width:0;flex:1}
+.compact-week-copy strong{font-size:14px!important;min-width:0;font-variant-numeric:tabular-nums;white-space:normal}
+.compact-week-copy small{border-left:1px solid #cbc5c3;padding-left:10px;margin-left:10px!important;white-space:nowrap}
+.week-calendar-icon{display:block;flex:0 0 18px;width:18px;height:18px;fill:none;stroke:var(--muted);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.compact-week-text{gap:7px;padding:9px 8px}
+.week-nav>button,.editor-week-picker>button{background:transparent;min-width:36px;padding:8px}
+.week-select-chevron{flex-basis:18px;width:18px}
+.absence-info{background:#eef4fb;padding:10px 12px;border-radius:10px;font-size:13px;overflow-wrap:anywhere}
+.absence-dates{display:grid;grid-template-columns:1fr 1fr;gap:10px}.absence-dates label{min-width:0}.absence-dates input{width:100%;min-width:0}
+#absenceFields{border:0;padding:0;min-width:0}#absenceFields>label{margin-top:12px}#absenceFields select,#absenceFields textarea{width:100%;display:block;margin-top:5px}
+#absenceSubmit:disabled{opacity:.55}.absence-item{padding:12px 0;border-top:1px solid var(--line)}.absence-item p{margin:4px 0;white-space:pre-wrap;overflow-wrap:anywhere}.absence-item button{border:1px solid var(--line);background:white}
+#myPlanSummary .plain-card{margin-top:12px}#myPlanSummary .plain-card>button{width:100%;border:1px solid var(--red);color:var(--red);background:white}
+#planningSupport.has-gaps{border-left:3px solid var(--red)}#planningSupport p{margin:5px 0;font-size:13px}#planningSupport .missing-number{color:var(--red);font-weight:700}
+.absence-setting{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:48px;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}
+.absence-setting input{appearance:none;-webkit-appearance:none;position:relative;flex:0 0 48px;width:48px;height:28px;border:1px solid #c9c5c5;border-radius:20px;background:#d9d5d4;padding:0;cursor:pointer}
+.absence-setting input:before{content:'';position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:white;box-shadow:0 1px 3px #0002;transition:transform .15s}
+.absence-setting input:checked{background:var(--red);border-color:var(--red)}.absence-setting input:checked:before{transform:translateX(20px)}
+@media(max-width:420px){.compact-week-text{gap:4px;padding:9px 4px}.compact-week-copy strong{font-size:12px!important}.compact-week-copy small{font-size:11px!important;padding-left:5px;margin-left:5px!important}.week-calendar-icon{width:15px;height:15px;flex-basis:15px}.week-nav>button,.editor-week-picker>button{min-width:28px;padding:4px}.week-select-chevron{width:14px;flex-basis:14px}.week-select-chevron svg{width:14px;height:14px}}
+@media(max-width:340px){.week-calendar-icon{display:none}.compact-week-copy strong{font-size:11px!important}.compact-week-copy small{padding-left:3px;margin-left:3px!important}}
