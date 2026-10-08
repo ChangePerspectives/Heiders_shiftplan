@@ -1,5 +1,5 @@
 // Bei jeder Veröffentlichung CACHE_VERSION ändern (oder dieses Paket vollständig ersetzen).
-const CACHE_VERSION = 'v4-11-email-codes-push-20261007';
+const CACHE_VERSION = 'v4-11-1-button-wochenwahl-20261008';
 const PREFIX = 'heiders-app-';
 const CACHE = PREFIX + CACHE_VERSION;
 const SHELL = ["./", "./index.html", "./cloud.js", "./auth.js", "./push.js", "./push-config.js", "./config.js", "./supabase.js", "./design.css", "./design.js", "./demo.js", "./manifest-v4-10.webmanifest", "./icon-192-v4-10.png", "./icon-512-v4-10.png", "./icon-maskable-512-v4-10.png", "./apple-touch-icon-v4-10.png", "./jspdf.js", "./pdf-font.js", "./pdf-export.js"];
