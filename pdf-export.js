@@ -42,7 +42,7 @@ function buildPlanPdf(snapshot){
   const absent=snapshot.team.filter(p=>['u','k','f'].includes(snapshot.data.shifts[p.name]?.[day]?.[period])||absenceAt(p.id,shiftDateKey(snapshot.week,day),period,snapshot.absences||[]));
   if(absent.length)lines.push('Abwesend / frei: '+absent.map(p=>p.name+' ('+(absenceAt(p.id,shiftDateKey(snapshot.week,day),period,snapshot.absences||[])?'Abwesenheit gemeldet':shiftRoleLabel(snapshot.data.shifts[p.name]?.[day]?.[period]))+')').join(', '));
   const res=(period==='tag'?snapshot.data.resTag:snapshot.data.resAbend)?.[day];
-  lines.push('Reservierungen '+(period==='tag'?'Tag':'Abend')+': '+(res||'-'));
+  lines.push('Reservierungen '+(period==='tag'?'Tag':'Abend')+': '+(reservationText(res)||'-'));
   return lines.join('\n');
  }
  header();tableHeader();

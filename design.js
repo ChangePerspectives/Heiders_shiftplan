@@ -64,7 +64,7 @@ function dayMarkup(edit,selectedDay=focusDay){
  const staff=team.filter(p=>isScheduled(data.shifts[p.name]?.[day]?.[period])&&!absenceAt(p.id,shiftDateKey(getWeekKey(currentWeekStart),day),period));
  const absences=team.filter(p=>['u','k','f'].includes(data.shifts[p.name]?.[day]?.[period])||absenceAt(p.id,shiftDateKey(getWeekKey(currentWeekStart),day),period));
  const needed=data.soll[day]?.[period]||0,open=Math.max(0,needed-staff.length),excess=Math.max(0,staff.length-needed),res=(period==='tag'?data.resTag:data.resAbend)?.[day];
- html+=`<article class="shift-card"><div class="shift-heading"><h3>${period==='tag'?'☀ Tagschicht':'☾ Abendschicht'}</h3><span class="${open||excess?'open-slot':needed>0?'occupancy is-complete':'occupancy'}">${excess?excess+' zu viel · '+staff.length+'/'+needed+' besetzt':open?open+' '+(open===1?'Platz frei':'Plätze frei'):(!needed&&!staff.length?'Kein Bedarf':(needed>0?'✓ ':'')+staff.length+' von '+needed+' besetzt')}</span></div><p class="hint">${period==='tag'?'Ab 10:30 Uhr':'Ab 15:00 Uhr'}</p><div class="reservation ${res?.trim()?'has-reservation':''}"><strong>${res?.trim()?'📌 ':''}Reservierungen · ${period==='tag'?'Tag':'Abend'}</strong>${res?escapeHtml(res):'Keine Reservierungen hinterlegt.'}</div><ul class="roster">${staff.map(p=>{
+ html+=`<article class="shift-card"><div class="shift-heading"><h3>${period==='tag'?'☀ Tagschicht':'☾ Abendschicht'}</h3><span class="${open||excess?'open-slot':needed>0?'occupancy is-complete':'occupancy'}">${excess?excess+' zu viel · '+staff.length+'/'+needed+' besetzt':open?open+' '+(open===1?'Platz frei':'Plätze frei'):(!needed&&!staff.length?'Kein Bedarf':(needed>0?'✓ ':'')+staff.length+' von '+needed+' besetzt')}</span></div><p class="hint">${period==='tag'?'Ab 10:30 Uhr':'Ab 15:00 Uhr'}</p><div class="reservation ${res?.trim()?'has-reservation':''}"><strong>${res?.trim()?'📌 ':''}Reservierungen · ${period==='tag'?'Tag':'Abend'}</strong>${res?escapeHtml(reservationText(res)):'Keine Reservierungen hinterlegt.'}</div><ul class="roster">${staff.map(p=>{
  const transfer=pendingFor(p.id,day,period);
  return `<li><div class="person-line"><strong>${escapeHtml(p.name)}</strong><span>${escapeHtml(shiftRoleLabel(data.shifts[p.name][day][period]))}</span></div>${shiftTimeHint(p.name,day,period)}${data.shifts[p.name][day][period]==='offen'&&!transfer&&!isShiftLocked(getWeekKey(currentWeekStart),day,period)&&(cloudActor?.is_admin||cloudActor?.id===p.id)&&edit&&p.name!==currentUser?roleConfirmationButtons(p.id,day,period):''}${transfer?`<div class="transfer-status">Übernahme bei ${escapeHtml(personName(transfer.taker_id))} angefragt · Bestätigung offen</div>`:''}</li>`;
  }).join('')}</ul>${!staff.length?'<p class="hint">Noch niemand eingetragen.</p>':''}${absences.length?`<p class="absence-line">Abwesend / frei: ${absences.map(p=>escapeHtml(p.name)+' ('+escapeHtml(absenceAt(p.id,shiftDateKey(getWeekKey(currentWeekStart),day),period)?'Abwesenheit gemeldet':shiftRoleLabel(data.shifts[p.name]?.[day]?.[period]))+')').join(', ')}</p>`:''}${edit?renderClaimAction(day,period):''}</article>`;
@@ -303,7 +303,7 @@ function closeSollModal(force=false){
 function requestEditorAction(action){
  if(!planEditor||planEditor.busy)return;
  if(!editorDirty()){return action();}
- planEditor.pending=action;document.querySelectorAll('#sollModal input,#sollModal textarea,#sollModal .editor-week-picker button,#sollModal .editor-actions button').forEach(el=>el.disabled=true);document.getElementById('editorConfirm').hidden=false;document.getElementById('editorPromptSave').focus();
+ planEditor.pending=action;document.querySelectorAll('#sollModal input,#sollModal textarea,#sollModal select,#sollModalContent button,#sollModal .editor-week-picker button,#sollModal .editor-actions button').forEach(el=>el.disabled=true);document.getElementById('editorConfirm').hidden=false;document.getElementById('editorPromptSave').focus();
 }
 async function resolveEditorPrompt(choice){
  const context=planEditor;if(!context||context.busy)return;
@@ -340,7 +340,7 @@ async function savePlanEditor(){
   const id=(settingsMode==='bedarf'?'soll_':'res_')+d.key+'_'+period,value=values[id];
   if(settingsMode==='bedarf'){
    const number=Number(value);if(value.trim()===''||!Number.isInteger(number)||number<0||number>50){editorMessage('Personalbedarf muss eine ganze Zahl zwischen 0 und 50 sein.',true);document.getElementById(id).focus();return false;}snapshot.soll[d.key][period]=number;
-  }else{if(value.length>300){editorMessage('Reservierungen dürfen maximal 300 Zeichen pro Schicht enthalten.',true);document.getElementById(id).focus();return false;}(period==='tag'?snapshot.resTag:snapshot.resAbend)[d.key]=value;}
+  }else{if(value.length>6000){editorMessage('Reservierungen dürfen maximal 6000 Zeichen pro Schicht enthalten.',true);document.getElementById(id).focus();return false;}(period==='tag'?snapshot.resTag:snapshot.resAbend)[d.key]=value;}
  }
  editorBusy(true);editorMessage('Wird gespeichert …');
  try{

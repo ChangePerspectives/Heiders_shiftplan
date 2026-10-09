@@ -54,6 +54,7 @@ function demoReplyStatus(week){
 }
 function demoEffective(t){if(t.status!=='pending')return t.status;const s=demoShift(t.week,t.giver_id,t.day,t.period),target=demoShift(t.week,t.taker_id,t.day,t.period);return s?.revision===t.source_revision&&target?.revision===t.target_revision&&s?.value===t.shift_value?'pending':'stale';}
 function demoExecute(name,a){
+ if(['heiders_work_action','heiders_get_work_times','heiders_correct_work_time','heiders_get_work_audit'].includes(name))return demoWorkExecute(name,a);
  if(name.startsWith('heiders_')&&['heiders_get_absences','heiders_report_absence','heiders_cancel_absence','heiders_save_absence_settings'].includes(name))return demoAbsenceExecute(name,a);
  const actor=demoActor();demoAssert(actor);
  if(name==='assign_recurring_shifts')return demoAssignRecurring(a);
@@ -231,4 +232,29 @@ function demoAbsenceExecute(name,a){
   for(const s of demoStore.shifts.filter(s=>s.user_id===x.user_id&&isScheduled(s.value)&&shiftDateKey(s.week,s.day)>=x.start_date&&shiftDateKey(s.week,s.day)<=x.end_date&&(x.period==='all'||x.period===s.period)&&!isShiftLocked(s.week,s.day,s.period)))demoAssert(!demoCapacityNotice(s.week,s.day,s.period,false),'Rücknahme würde eine Überbesetzung erzeugen. Pia oder Nelly müssen zuerst die Zuweisungen prüfen.','22023');
   demoNotice('absence','admins','Abwesenheit zurückgezogen',personName(x.user_id)+' hat die Abwesenheit zurückgezogen.',selectedMonday(x.start_date));return null;
  }
+}
+// v4.13 test storage; never writes to the real database.
+function demoWorkExecute(name,a){
+ const actor=demoActor();demoAssert(actor);demoStore.work_times??=[];demoStore.work_time_audit??=[];const now=new Date().toISOString(),entries=demoStore.work_times;
+ if(name==='heiders_work_action'){
+  demoAssert(['start','pause','resume','end'].includes(a.p_action),'Ungültige Aktion','22023');const row=entries.find(r=>r.user_id===actor.id&&!r.ended_at&&!r.voided);
+  if(a.p_action==='start'){demoAssert(!row,'Arbeitszeit läuft bereits.','22023');demoAssert(!entries.some(r=>r.user_id===actor.id&&!r.voided&&r.ended_at>now),'Spätere Arbeitszeit vorhanden.','22023');const id=demoId();entries.push({id,user_id:actor.id,started_at:now,ended_at:null,breaks:[],revision:1,corrected:false,correction_reason:'',voided:false,created_by:actor.id,created_at:now});return id;}
+  demoAssert(row,'Keine laufende Arbeitszeit.','22023');demoAssert(now>row.started_at,'Bitte kurz warten.','22023');const last=row.breaks.at(-1);
+  if(a.p_action==='pause'){demoAssert(!last||last.end,'Pause läuft bereits.','22023');row.breaks.push({start:now,end:null});}
+  else if(a.p_action==='resume'){demoAssert(last&&!last.end,'Keine laufende Pause.','22023');demoAssert(now>last.start,'Bitte kurz warten.','22023');last.end=now;}
+  else{if(last&&!last.end)last.end=now;row.ended_at=now;}
+  row.revision++;return row.id;
+ }
+ if(name==='heiders_get_work_times'){
+  const month=a.p_month?.slice(0,7);demoAssert(a.p_month===month+'-01'&&/^\d{4}-(0[1-9]|1[0-2])$/.test(month),'Ungültiger Monat','22023');demoAssert(actor.is_admin||!a.p_user||a.p_user===actor.id,'Nur eigene Arbeitszeiten sichtbar');const user=actor.is_admin?a.p_user:actor.id,[start,end]=timeMonthBounds(month);
+  return {month,month_start:new Date(start).toISOString(),month_end:new Date(end).toISOString(),server_now:now,active:structuredClone(entries.find(r=>r.user_id===actor.id&&!r.ended_at&&!r.voided)||null),entries:entries.filter(r=>(!user||r.user_id===user)&&Date.parse(r.started_at)<end&&Date.parse(r.ended_at||now)>start).map(r=>({...structuredClone(r),name:demoStore.profiles.find(p=>p.id===r.user_id)?.name})).sort((a,b)=>a.name.localeCompare(b.name)||a.started_at.localeCompare(b.started_at))};
+ }
+ if(name==='heiders_get_work_audit'){demoAssert(actor.is_admin);return demoStore.work_time_audit.filter(r=>r.entry_id===a.p_id).map(r=>({...structuredClone(r),actor_name:demoStore.profiles.find(p=>p.id===r.actor_id)?.name}));}
+ demoAssert(actor.is_admin,'Nur Admins dürfen Zeiten korrigieren');const row=a.p_id?entries.find(r=>r.id===a.p_id):null;
+ demoAssert(demoStore.profiles.some(p=>p.id===a.p_user),'Teamprofil fehlt','22023');
+ if(a.p_id){demoAssert(row&&row.user_id===a.p_user,'Eintrag passt nicht zur Person','22023');demoAssert(row.revision===a.p_revision,'Zwischenzeitlich geändert','40001');}else demoAssert(a.p_revision===0&&a.p_voided===false,'Ungültiger neuer Eintrag','22023');
+ const start=Date.parse(a.p_start),end=Date.parse(a.p_end);demoAssert(a.p_reason?.trim().length>0&&a.p_reason.trim().length<=500&&end>start&&end<=Date.now()&&start>=Date.parse('2020-01-01')&&end-start<=48*3600000&&typeof a.p_voided==='boolean','Bitte Zeitraum und Korrekturgrund prüfen.','22023');
+ demoAssert(Array.isArray(a.p_breaks)&&a.p_breaks.length<=50,'Ungültige Pausen','22023');let previous=start;for(const b of a.p_breaks){const bs=Date.parse(b.start),be=Date.parse(b.end);demoAssert(bs>=previous&&be>bs&&be<=end,'Pausen überschneiden sich oder liegen außerhalb der Arbeitszeit.','22023');previous=be;}
+ demoAssert(a.p_voided||!entries.some(r=>r.user_id===a.p_user&&r.id!==a.p_id&&!r.voided&&Date.parse(r.started_at)<end&&Date.parse(r.ended_at||'9999-01-01')>start),'Arbeitszeit überschneidet sich.','22023');const before=row?structuredClone(row):null,newRow=row||{id:demoId(),user_id:a.p_user,created_by:actor.id,created_at:now,revision:0};Object.assign(newRow,{started_at:a.p_start,ended_at:a.p_end,breaks:structuredClone(a.p_breaks),corrected:true,correction_reason:a.p_reason.trim(),voided:a.p_voided,revision:newRow.revision+1});if(!row)entries.push(newRow);
+ demoStore.work_time_audit.push({id:demoId(),entry_id:newRow.id,actor_id:actor.id,created_at:now,reason:a.p_reason.trim(),before_data:before,after_data:structuredClone(newRow)});return newRow.id;
 }
