@@ -54,7 +54,7 @@ function demoReplyStatus(week){
 }
 function demoEffective(t){if(t.status!=='pending')return t.status;const s=demoShift(t.week,t.giver_id,t.day,t.period),target=demoShift(t.week,t.taker_id,t.day,t.period);return s?.revision===t.source_revision&&target?.revision===t.target_revision&&s?.value===t.shift_value?'pending':'stale';}
 function demoExecute(name,a){
- if(['heiders_work_action','heiders_get_work_times','heiders_correct_work_time','heiders_get_work_audit'].includes(name))return demoWorkExecute(name,a);
+ if(['heiders_work_action','heiders_get_work_times','heiders_correct_work_time','heiders_get_work_audit','heiders_save_manual_work'].includes(name))return demoWorkExecute(name,a);
  if(name.startsWith('heiders_')&&['heiders_get_absences','heiders_report_absence','heiders_cancel_absence','heiders_save_absence_settings'].includes(name))return demoAbsenceExecute(name,a);
  const actor=demoActor();demoAssert(actor);
  if(name==='assign_recurring_shifts')return demoAssignRecurring(a);
@@ -249,12 +249,23 @@ function demoWorkExecute(name,a){
   const month=a.p_month?.slice(0,7);demoAssert(a.p_month===month+'-01'&&/^\d{4}-(0[1-9]|1[0-2])$/.test(month),'Ungültiger Monat','22023');demoAssert(actor.is_admin||!a.p_user||a.p_user===actor.id,'Nur eigene Arbeitszeiten sichtbar');const user=actor.is_admin?a.p_user:actor.id,[start,end]=timeMonthBounds(month);
   return {month,month_start:new Date(start).toISOString(),month_end:new Date(end).toISOString(),server_now:now,active:structuredClone(entries.find(r=>r.user_id===actor.id&&!r.ended_at&&!r.voided)||null),entries:entries.filter(r=>(!user||r.user_id===user)&&Date.parse(r.started_at)<end&&Date.parse(r.ended_at||now)>start).map(r=>({...structuredClone(r),name:demoStore.profiles.find(p=>p.id===r.user_id)?.name})).sort((a,b)=>a.name.localeCompare(b.name)||a.started_at.localeCompare(b.started_at))};
  }
+ if(name==='heiders_save_manual_work'){
+  demoAssert(actor.is_admin||a.p_user===actor.id,'Nur eigene Arbeitszeiten dürfen eingetragen werden');const row=a.p_id?entries.find(r=>r.id===a.p_id):null;
+  demoAssert(demoStore.profiles.some(p=>p.id===a.p_user),'Teamprofil fehlt','22023');
+  if(a.p_id){demoAssert(row&&row.user_id===a.p_user,'Eintrag passt nicht zur Person');demoAssert(row.entry_mode==='manual'&&!row.voided,'Diesen Eintrag bitte durch Pia oder Nelly prüfen lassen','22023');demoAssert(row.revision===a.p_revision,'Zwischenzeitlich geändert','40001');demoAssert(a.p_note?.trim().length>0,'Bitte einen Grund für die Änderung eingeben','22023');}
+  else demoAssert(a.p_revision===0&&demoStore.profiles.some(p=>p.id===a.p_user&&p.active),'Ungültige Version oder inaktives Profil','22023');
+  const start=Date.parse(a.p_start),end=Date.parse(a.p_end);demoAssert(end>start&&end<=Date.now()&&start>=Date.parse('2020-01-01')&&end-start<=25*3600000&&Number.isInteger(a.p_pause)&&a.p_pause>=0&&a.p_pause<=1500&&a.p_pause*60000<end-start&&typeof a.p_note==='string'&&a.p_note.length<=500,'Bitte abgeschlossenen Zeitraum und Pausenminuten prüfen','22023');
+  demoAssert(!entries.some(r=>r.user_id===a.p_user&&r.id!==a.p_id&&!r.voided&&Date.parse(r.started_at)<end&&Date.parse(r.ended_at||'9999-01-01')>start),'Diese Zeit überschneidet sich mit einem vorhandenen oder noch offenen Eintrag.','22023');
+  const before=row?structuredClone(row):null,newRow=row||{id:demoId(),user_id:a.p_user,created_by:actor.id,created_at:now,revision:0,voided:false,corrected:false};
+  Object.assign(newRow,{started_at:a.p_start,ended_at:a.p_end,breaks:[],entry_mode:'manual',manual_break_minutes:a.p_pause,correction_reason:a.p_note.trim(),revision:newRow.revision+1,corrected:!!row});if(!row)entries.push(newRow);
+  demoStore.work_time_audit.push({id:demoId(),entry_id:newRow.id,actor_id:actor.id,created_at:now,reason:a.p_note.trim()||'Manuell eingetragen',before_data:before,after_data:structuredClone(newRow)});return newRow.id;
+ }
  if(name==='heiders_get_work_audit'){demoAssert(actor.is_admin);return demoStore.work_time_audit.filter(r=>r.entry_id===a.p_id).map(r=>({...structuredClone(r),actor_name:demoStore.profiles.find(p=>p.id===r.actor_id)?.name}));}
  demoAssert(actor.is_admin,'Nur Admins dürfen Zeiten korrigieren');const row=a.p_id?entries.find(r=>r.id===a.p_id):null;
  demoAssert(demoStore.profiles.some(p=>p.id===a.p_user),'Teamprofil fehlt','22023');
  if(a.p_id){demoAssert(row&&row.user_id===a.p_user,'Eintrag passt nicht zur Person','22023');demoAssert(row.revision===a.p_revision,'Zwischenzeitlich geändert','40001');}else demoAssert(a.p_revision===0&&a.p_voided===false,'Ungültiger neuer Eintrag','22023');
  const start=Date.parse(a.p_start),end=Date.parse(a.p_end);demoAssert(a.p_reason?.trim().length>0&&a.p_reason.trim().length<=500&&end>start&&end<=Date.now()&&start>=Date.parse('2020-01-01')&&end-start<=48*3600000&&typeof a.p_voided==='boolean','Bitte Zeitraum und Korrekturgrund prüfen.','22023');
  demoAssert(Array.isArray(a.p_breaks)&&a.p_breaks.length<=50,'Ungültige Pausen','22023');let previous=start;for(const b of a.p_breaks){const bs=Date.parse(b.start),be=Date.parse(b.end);demoAssert(bs>=previous&&be>bs&&be<=end,'Pausen überschneiden sich oder liegen außerhalb der Arbeitszeit.','22023');previous=be;}
- demoAssert(a.p_voided||!entries.some(r=>r.user_id===a.p_user&&r.id!==a.p_id&&!r.voided&&Date.parse(r.started_at)<end&&Date.parse(r.ended_at||'9999-01-01')>start),'Arbeitszeit überschneidet sich.','22023');const before=row?structuredClone(row):null,newRow=row||{id:demoId(),user_id:a.p_user,created_by:actor.id,created_at:now,revision:0};Object.assign(newRow,{started_at:a.p_start,ended_at:a.p_end,breaks:structuredClone(a.p_breaks),corrected:true,correction_reason:a.p_reason.trim(),voided:a.p_voided,revision:newRow.revision+1});if(!row)entries.push(newRow);
+ demoAssert(a.p_voided||!entries.some(r=>r.user_id===a.p_user&&r.id!==a.p_id&&!r.voided&&Date.parse(r.started_at)<end&&Date.parse(r.ended_at||'9999-01-01')>start),'Arbeitszeit überschneidet sich.','22023');const before=row?structuredClone(row):null,newRow=row||{id:demoId(),user_id:a.p_user,created_by:actor.id,created_at:now,revision:0};Object.assign(newRow,{started_at:a.p_start,ended_at:a.p_end,breaks:structuredClone(a.p_breaks),entry_mode:'clock',manual_break_minutes:null,corrected:true,correction_reason:a.p_reason.trim(),voided:a.p_voided,revision:newRow.revision+1});if(!row)entries.push(newRow);
  demoStore.work_time_audit.push({id:demoId(),entry_id:newRow.id,actor_id:actor.id,created_at:now,reason:a.p_reason.trim(),before_data:before,after_data:structuredClone(newRow)});return newRow.id;
 }
