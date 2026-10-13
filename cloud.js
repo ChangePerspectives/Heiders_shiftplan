@@ -107,7 +107,7 @@ async function cloudWrite(name,args,onSuccess) {
   return saved;
 }
 async function cloudInit() {
-  if(location.hash==='#test' || sessionStorage.getItem('heiders_test_active')==='1'){await startDemo();return;}
+  window.heidersDemoActive=false;sessionStorage.removeItem('heiders_test_active');
   cloudClear();switchTab('cards');
   document.getElementById('rememberLogin').checked=localStorage.getItem('heiders_auth_remember')!=='0';
   const config=window.HEIDERS_CONFIG || {};
